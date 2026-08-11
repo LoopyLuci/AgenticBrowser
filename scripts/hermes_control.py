@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hermes/CLI wrapper for AgenticBrowser control plane."""
+"""Hermes/CLI wrapper for AgenticBrowser control plane + backend."""
 import argparse
 import hashlib
 import hmac
@@ -8,7 +8,8 @@ import os
 import sys
 from urllib import request, error
 
-BASE = os.getenv("AGENTIC_CONTROL_BASE", "http://localhost:8766")
+CONTROL_BASE = os.getenv("AGENTIC_CONTROL_BASE", "http://localhost:8766")
+BACKEND_BASE = os.getenv("AGENTIC_BACKEND_BASE", "http://127.0.0.1:8123")
 SECRET = os.getenv("AGENTIC_CONTROL_SECRET", os.getenv("MESH_CLUSTER_KEY", ""))
 
 
@@ -18,8 +19,8 @@ def sign(payload: dict) -> str:
     return mac
 
 
-def call(path: str, payload: dict | None = None):
-    url = f"{BASE}{path}"
+def call(base: str, path: str, payload: dict | None = None):
+    url = f"{base}{path}"
     body = None
     headers = {"Content-Type": "application/json"}
     if payload is not None:
@@ -48,7 +49,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "health":
-        print(call("/health"))
+        print(call(CONTROL_BASE, "/health"))
     elif args.command == "chat":
         if not args.message:
             print("--message is required for chat"); sys.exit(2)
@@ -58,7 +59,7 @@ def main():
             "model": args.model,
             "messages": [{"role": "user", "content": args.message}],
         }
-        print(call("/v1/control/chat", payload))
+        print(call(CONTROL_BASE, "/v1/control/chat", payload))
     elif args.command == "settings":
         payload = {}
         if args.ollama_host:
@@ -67,7 +68,7 @@ def main():
             payload["openrouterKey"] = args.openrouter_key
         if args.openai_key:
             payload["openaiKey"] = args.openai_key
-        print(call("/v1/settings", payload or None))
+        print(call(BACKEND_BASE, "/v1/settings", payload or None))
 
 
 if __name__ == "__main__":
