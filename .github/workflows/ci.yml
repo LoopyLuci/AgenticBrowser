@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m venv .venv
-      - run: .venv/Scripts/Activate.ps1; pip install fastapi uvicorn httpx pydantic pytest
+      - run: .venv/Scripts/Activate.ps1; pip install fastapi uvicorn httpx pydantic pytest sse-starlette
       - run: .venv/Scripts/python -m pytest
 
   control-typecheck:
