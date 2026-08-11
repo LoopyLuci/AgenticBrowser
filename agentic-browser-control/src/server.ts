@@ -46,7 +46,7 @@ async function start() {
       });
 
       await new Promise<void>((resolve, reject) => {
-        server.listen(port, () => {
+        server.listen(port, "127.0.0.1", () => {
           console.log(`AgenticBrowser control server on http://localhost:${port}`);
           resolve();
         });
@@ -68,6 +68,7 @@ async function start() {
     }
 
     console.warn(`Port ${port} busy, trying ${port + 1}`);
+    await new Promise((resolve) => setTimeout(resolve, 500));
     port += 1;
   }
 }

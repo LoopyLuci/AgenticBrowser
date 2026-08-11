@@ -14,6 +14,10 @@ function notifyStreamListeners(requestId: string, chunk: string) {
       } catch {}
     });
   }
+
+  try {
+    chrome.runtime.sendMessage({ type: "STREAM_TOKEN", requestId, payload: { chunk } });
+  } catch {}
 }
 
 function addStreamListener(requestId: string, listener: StreamListener) {
@@ -54,6 +58,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     })();
     return true;
   }
+
   if (message?.type === "CHAT_STREAM_REQUEST") {
     (async () => {
       try {
@@ -115,6 +120,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     })();
     return true;
   }
+
+  if (message?.type === "REGISTER_STREAM_LISTENER") {
+    const requestId = message.payload?.requestId;
+    const listenerId = message.payload?.listenerId;
+    if (!requestId || !listenerId) {
+      sendResponse({ ok: false, error: "missing requestId/listenerId" });
+      return;
+    }
+    const listeners = new Map<string, (chunk: string) => void>();
+    const remove = addStreamListener(requestId, (chunk) => {
+      listeners.forEach((fn) => {
+        try {
+          fn(chunk);
+        } catch {}
+      });
+    });
+    listeners.set(listenerId, (chunk) => {});
+    sendResponse({ ok: true, remove });
+    return;
+  }
+
   if (message?.type === "CONTROL_REQUEST") {
     (async () => {
       try {

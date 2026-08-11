@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import time
@@ -32,6 +33,13 @@ autoload_providers()
 app = FastAPI(title="AgenticBrowser Backend")
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "chrome-extension://*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 register_routes(app)
 settings = SettingsStore()
 

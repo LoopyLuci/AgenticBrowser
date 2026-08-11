@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "python -m uvicorn main:app --host 0.0.0.0 --port 8123 --reload",
     "start": "python -m uvicorn main:app --host 0.0.0.0 --port 8123",
+    "dev:https": "python -m uvicorn main:app --host 0.0.0.0 --port 8123 --ssl-keyfile ../certs/key.pem --ssl-certfile ../certs/cert.pem --reload",
+    "start:https": "python -m uvicorn main:app --host 0.0.0.0 --port 8123 --ssl-keyfile ../certs/key.pem --ssl-certfile ../certs/cert.pem",
     "test": "pytest"
   }
 }

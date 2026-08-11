@@ -27,6 +27,9 @@ export default function App() {
   const [openrouterKey, setOpenrouterKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
+  const [streaming, setStreaming] = useState(false);
+
+  const streamAbortRef = React.useRef<(() => void) | null>(null);
 
   const loadSettings = async () => {
     try {
@@ -91,19 +94,83 @@ export default function App() {
 
     try {
       const res = await chrome.runtime.sendMessage({
-        type: "CHAT_REQUEST",
+        type: "CHAT_STREAM_REQUEST",
         payload: {
           messages: outboundMessages,
           provider,
           model,
+          sessionId: `sidepanel-${Date.now()}`,
         },
       });
-      setMessages((m) => [
-        ...m,
-        { id: crypto.randomUUID(), role: "assistant", content: typeof res === "string" ? res : JSON.stringify(res ?? "No response") },
-      ]);
+
+      if (!res?.ok) {
+        throw new Error(res?.error || "Stream request failed");
+      }
+
+      const assistantId = crypto.randomUUID();
+      setMessages((m) => [...m, { id: assistantId, role: "assistant", content: "" }]);
+      setStreaming(true);
+
+      const listenerId = `sidepanel-${Date.now()}`;
+      const registerPromise = new Promise<{ remove?: () => void }>((resolve) => {
+        const attempts = [0, 50, 150];
+        let index = 0;
+
+        const tryRegister = () => {
+          chrome.runtime.sendMessage(
+            { type: "REGISTER_STREAM_LISTENER", payload: { requestId: res.requestId, listenerId } },
+            (regRes: any) => {
+              if (chrome.runtime.lastError || !regRes?.ok) {
+                index++;
+                if (index < attempts.length) {
+                  setTimeout(tryRegister, attempts[index]);
+                  return;
+                }
+                resolve({});
+                return;
+              }
+              resolve(regRes);
+            }
+          );
+        };
+
+        tryRegister();
+      });
+
+      const { remove } = await registerPromise;
+
+      await new Promise<void>((resolve) => {
+        const handler = (_msg: any, sender: any) => {
+          if (sender.id !== chrome.runtime.id) return false;
+          if (_msg?.type !== "STREAM_TOKEN" || _msg?.requestId !== res.requestId) return false;
+          const chunk = _msg.payload?.chunk;
+          if (!chunk) return false;
+          if (chunk === "__DONE__") {
+            setStreaming(false);
+            remove?.();
+            resolve();
+            return false;
+          }
+          setMessages((m) =>
+            m.map((msg) =>
+              msg.id === assistantId ? { ...msg, content: msg.content + chunk } : msg
+            )
+          );
+          return false;
+        };
+
+        const listener = (...args: any[]) => handler(...args);
+        chrome.runtime.onMessage.addListener(listener);
+        streamAbortRef.current = () => {
+          chrome.runtime.onMessage.removeListener(listener);
+          remove?.();
+          setStreaming(false);
+          resolve();
+        };
+      });
     } catch (err) {
       setMessages((m) => [...m, { id: crypto.randomUUID(), role: "assistant", content: `Error: ${(err as Error).message}` }]);
+      setStreaming(false);
     } finally {
       setIsSending(false);
     }
