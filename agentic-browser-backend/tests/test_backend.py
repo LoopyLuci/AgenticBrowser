@@ -76,7 +76,7 @@ def test_provider_live_ollama_smoke():
     base = os.getenv("OLLAMA_HOST")
     if not base:
         pytest.skip("OLLAMA_HOST not set")
-    model = os.getenv("OLLAMA_MODEL", "llama3")
+    model = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
     r = client.post("/v1/chat", json={
         "session_id": "pytest-ollama",
         "provider": "ollama",

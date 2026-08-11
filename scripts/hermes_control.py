@@ -14,7 +14,7 @@ SECRET = os.getenv("AGENTIC_CONTROL_SECRET", os.getenv("MESH_CLUSTER_KEY", ""))
 
 
 def sign(payload: dict) -> str:
-    body = json.dumps(payload, separators=(",", ":")).encode()
+    body = json.dumps(payload).encode()
     mac = hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
     return mac
 
@@ -24,7 +24,7 @@ def call(base: str, path: str, payload: dict | None = None):
     body = None
     headers = {"Content-Type": "application/json"}
     if payload is not None:
-        body = json.dumps(payload, separators=(",", ":")).encode()
+        body = json.dumps(payload).encode()
         headers["x-signature"] = sign(payload)
     req = request.Request(url, data=body, headers=headers, method="POST" if payload is not None else "GET")
     try:

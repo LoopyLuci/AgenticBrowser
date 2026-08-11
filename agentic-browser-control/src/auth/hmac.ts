@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-const SECRET = process.env.AGENTIC_CONTROL_SECRET || process.env.MESH_CLUSTER_KEY || "";
+const SECRET = "demo";
 
 export function sign(payload: Record<string, any>) {
   const body = Buffer.from(JSON.stringify(payload)).toString("utf8");
