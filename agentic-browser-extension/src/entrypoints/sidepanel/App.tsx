@@ -26,6 +26,7 @@ export default function App() {
   const [ollamaHost, setOllamaHost] = useState("http://localhost:11434");
   const [openrouterKey, setOpenrouterKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
+  const [backendHost, setBackendHost] = useState("http://localhost:8123");
   const [saveMsg, setSaveMsg] = useState("");
   const [streaming, setStreaming] = useState(false);
 

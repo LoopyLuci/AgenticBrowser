@@ -53,6 +53,17 @@ Or clean the port manually before restart:
 netstat -ano | awk '/:8766/ && /LISTENING/ {print $5}' | sort -u | xargs -r -I {} taskkill /F /PID {}
 ```
 
+## Troubleshooting
+
+### Hermes Desktop skill dispatch returns `Invalid signature`
+
+If the Hermes skill wrapper or local `scripts/hermes_control.py` fails with `401 Invalid signature`, confirm the control plane was started with the same secret expected by the client. On this Windows setup, if the server did not inherit the environment variable, HMAC auth will reject the request even if `/health` succeeds.
+
+Workaround:
+
+- Start control plane with an explicit secret: `AGENTIC_CONTROL_SECRET=demo npm run start:control`
+- Call the wrapper with the same secret: `AGENTIC_CONTROL_SECRET=demo python scripts/hermes_control.py chat ...`
+
 ## Dev
 
 ```bash

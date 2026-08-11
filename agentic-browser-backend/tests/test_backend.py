@@ -88,3 +88,21 @@ def test_provider_live_ollama_smoke():
     body = r.json()
     assert isinstance(body, dict)
     assert "message" in body or "content" in body or "data" in body
+
+
+def test_metrics_endpoint_returns_summary():
+    r = client.get("/metrics")
+    assert r.status_code == 200
+    body = r.json()
+    assert "requests" in body
+
+
+def test_audit_log_emits_during_chat():
+    r = client.post("/v1/chat", json={
+        "session_id": "pytest-audit",
+        "provider": "ollama",
+        "model": "qwen2.5:0.5b",
+        "messages": [{"role": "user", "content": "ping"}],
+        "stream": False,
+    })
+    assert r.status_code == 200

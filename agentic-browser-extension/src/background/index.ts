@@ -1,6 +1,14 @@
 const API_BASE = "http://localhost:8123";
 const CONTROL_BASE = "http://localhost:8766";
 
+async function getApiBase(): Promise<string> {
+  try {
+    const result = await chrome.storage.local.get(["backendHost"]);
+    if (result.backendHost) return result.backendHost;
+  } catch {}
+  return API_BASE;
+}
+
 type StreamListener = (chunk: string) => void;
 
 const streamListeners: Map<string, Set<StreamListener>> = new Map();
@@ -40,7 +48,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "CHAT_REQUEST") {
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/v1/chat`, {
+        const apiBase = await getApiBase();
+        const res = await fetch(`${apiBase}/v1/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -63,7 +72,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     (async () => {
       try {
         const requestId = `${message.payload.sessionId || "default"}-${Date.now()}`;
-        const res = await fetch(`${API_BASE}/v1/chat/stream`, {
+        const apiBase = await getApiBase();
+        const res = await fetch(`${apiBase}/v1/chat/stream`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
