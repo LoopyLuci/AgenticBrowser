@@ -1,0 +1,1 @@
+AgenticBrowser is a next-generation browser assistant for agentic workflows. It supports Ollama, OpenRouter, OpenCode, OpenAI, Gemini, and Claude, with a pink/purple/green retro punk UI and deep Hermes Agent Desktop/CLI integration.

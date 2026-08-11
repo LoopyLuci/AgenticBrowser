@@ -1,0 +1,35 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+dist/
+.npm/
+
+# Logs
+logs/
+*.log
+*.jsonl
+
+# State
+*.db
+.agentic-state*.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Project artifacts
+release/
+dist/

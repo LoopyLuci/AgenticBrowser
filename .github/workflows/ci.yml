@@ -1,0 +1,71 @@
+name: AgenticBrowser CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: agentic-browser-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m venv .venv
+      - run: .venv/Scripts/Activate.ps1; pip install fastapi uvicorn httpx pydantic pytest
+      - run: .venv/Scripts/python -m pytest
+
+  control-typecheck:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: agentic-browser-control
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run build
+
+  extension-build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: agentic-browser-extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test tests/smoke.spec.ts --reporter=line
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agenticbrowser-extension
+          path: dist/**
+
+  web-build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: agentic-browser-web-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agenticbrowser-web-ui
+          path: dist/**

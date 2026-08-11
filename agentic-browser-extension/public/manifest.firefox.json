@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "AgenticBrowser",
+  "version": "0.1.0",
+  "description": "AgenticBrowser: next-gen agentic browser assistant with Ollama, OpenRouter, OpenCode, OpenAI, Gemini, and Claude support, plus Hermes Agent control.",
+  "permissions": ["storage", "sidePanel", "activeTab", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "scripts": ["background.js"], "type": "module" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "agenticbrowser@example.com"
+    }
+  },
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}

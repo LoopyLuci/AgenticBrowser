@@ -1,0 +1,3 @@
+body { margin: 0; background: #0b0b12; color: #fff; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial; }
+#root { width: 380px; height: 100vh; }
+* { box-sizing: border-box; }
