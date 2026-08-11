@@ -7,6 +7,13 @@ echo "-- Backend tests --"
 cd agentic-browser-backend
 .venv/Scripts/python -m pytest tests/test_backend.py tests/test_providers.py -v
 
+echo "-- Backend live Ollama smoke --"
+if curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
+  OLLAMA_HOST=http://localhost:11434 OLLAMA_MODEL=qwen2.5:0.5b .venv/Scripts/python -m pytest tests/test_backend.py::test_provider_live_ollama_smoke tests/test_providers.py::test_ollama_live -v
+else
+  echo "Ollama not reachable at localhost:11434; skipping live test"
+fi
+
 echo "-- Control typecheck --"
 cd ../agentic-browser-control
 npm run build

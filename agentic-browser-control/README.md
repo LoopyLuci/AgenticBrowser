@@ -2,6 +2,31 @@
 
 Local control plane for AgenticBrowser on Windows.
 
+## Launch on Windows
+
+Prefer PowerShell or Command Prompt for long-running server processes.
+Background `bash` jobs can fail with:
+
+```
+bash: no job control in this shell
+```
+
+Recommended PowerShell launch:
+
+```powershell
+cd D:\Projects\AgenticBrowser\agentic-browser-control
+$env:AGENTIC_CONTROL_SECRET = "demo"
+npm run start:control
+```
+
+Recommended Command Prompt launch:
+
+```cmd
+cd /d D:\Projects\AgenticBrowser\agentic-browser-control
+set AGENTIC_CONTROL_SECRET=demo
+npm run start:control
+```
+
 ## Known limitation: port reuse
 
 On this Windows environment, `server.listen({ reusePort: true })` is not supported:
