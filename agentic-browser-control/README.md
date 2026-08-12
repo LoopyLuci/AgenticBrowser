@@ -64,6 +64,9 @@ Workaround:
 - Start control plane with an explicit secret: `AGENTIC_CONTROL_SECRET=demo npm run start:control`
 - Call the wrapper with the same secret: `AGENTIC_CONTROL_SECRET=demo python scripts/hermes_control.py chat ...`
 
+Known local limitation:
+- When launching from some Windows shell contexts, `AGENTIC_CONTROL_SECRET` may not reach the Node process. Prefer PowerShell or Command Prompt for Hermes Desktop skill dispatch testing.
+
 ## Dev
 
 ```bash
