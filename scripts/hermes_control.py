@@ -14,8 +14,9 @@ SECRET = os.getenv("AGENTIC_CONTROL_SECRET", os.getenv("MESH_CLUSTER_KEY", ""))
 
 
 def sign(payload: dict) -> str:
+    secret = os.getenv("AGENTIC_CONTROL_SECRET", os.getenv("MESH_CLUSTER_KEY", ""))
     body = json.dumps(payload).encode()
-    mac = hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
+    mac = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     return mac
 
 

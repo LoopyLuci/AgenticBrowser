@@ -29,6 +29,7 @@ fi
 echo "-- Control typecheck --"
 cd ../agentic-browser-control
 npm run build
+npm test
 
 echo "-- Extension build + Playwright smoke --"
 cd ../agentic-browser-extension
@@ -37,8 +38,12 @@ npx playwright test tests/smoke.spec.ts --reporter=line
 
 echo "-- Extension Firefox packaging validation --"
 cd ..
+python scripts/validate-release.py
 bash scripts/package-firefox.sh agentic-browser-extension/dist release/agenticbrowser-extension-firefox.zip
-python -c "import zipfile, sys; z=zipfile.ZipFile('release/agenticbrowser-extension-firefox.zip'); files=z.namelist(); required=['manifest.firefox.json','background.js','sidepanel.html']; missing=[f for f in required if f not in files]; sys.exit(1 if missing else 0)"
+python scripts/validate-release.py
+
+echo "-- Hermes wrapper test --"
+python -m pytest scripts/tests/test_hermes_control.py -v
 
 echo "-- Web build --"
 cd agentic-browser-web-ui

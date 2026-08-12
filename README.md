@@ -46,6 +46,10 @@ npm run build
 ## Store submission prerequisites
 Current packaging is ready; store submission is blocked by missing credentials only.
 
+### Packaging validation
+Before manual upload, run:
+- `python scripts/validate-release.py`
+
 ### Chrome Web Store
 1. Create a Chrome Web Store developer account.
 2. Prepare a signed ZIP from `release/agenticbrowser-extension-chrome.zip`.

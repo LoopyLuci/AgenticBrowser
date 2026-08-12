@@ -28,12 +28,14 @@ async function start() {
     if (!(await isPortInUse(port))) {
       const app = express();
       app.use(cors());
-      app.use(express.json({ limit: "1mb" }));
-
-      app.use((req, _res, next) => {
-        (req as any).rawBody = req.body;
-        next();
-      });
+      app.use(
+        express.json({
+          limit: "1mb",
+          verify: (req: any, _res: any, buf: Buffer) => {
+            req.rawBody = buf.toString("utf8");
+          },
+        })
+      );
 
       const server = http.createServer(app);
       wireWs(server);
