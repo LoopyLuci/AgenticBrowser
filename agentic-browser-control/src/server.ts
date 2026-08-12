@@ -7,6 +7,22 @@ import { requireHmac } from "./middleware/auth.js";
 
 const PORT = Number(process.env.PORT || 8766);
 
+type PreflightResult = { ok: boolean; error?: string };
+
+async function preflight(): Promise<PreflightResult> {
+  const port = Number(process.env.PORT || 8766);
+  if (!Number.isFinite(port) || port <= 0 || port > 65535) {
+    return { ok: false, error: `Invalid PORT: ${process.env.PORT}` };
+  }
+
+  const secret = process.env.AGENTIC_CONTROL_SECRET || process.env.MESH_CLUSTER_KEY;
+  if (!secret) {
+    return { ok: false, error: "Missing AGENTIC_CONTROL_SECRET or MESH_CLUSTER_KEY" };
+  }
+
+  return { ok: true };
+}
+
 function isPortInUse(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.createConnection(port, "127.0.0.1");

@@ -5,7 +5,7 @@ echo "== AgenticBrowser Local CI =="
 
 echo "-- Backend tests --"
 cd agentic-browser-backend
-.venv/Scripts/python -m pytest tests/test_backend.py tests/test_providers.py -v
+.venv/Scripts/python -m pytest tests/test_backend.py tests/test_providers.py tests/test_observability.py tests/test_rate_limit.py tests/test_ssl.py tests/test_supervisor.py -v
 
 echo "-- Backend live provider smoke --"
 if curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then

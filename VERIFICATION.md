@@ -17,6 +17,8 @@
 - [x] `pytest tests/test_backend.py -v` passes
 - [x] `pytest tests/test_observability.py -v` passes
 - [x] `pytest tests/test_rate_limit.py -v` passes
+- [x] `pytest tests/test_ssl.py -v` passes
+- [x] `pytest tests/test_supervisor.py -v` passes
 
 ## Control plane
 - [x] `cd agentic-browser-control && npm run dev`
@@ -27,6 +29,7 @@
 
 ## Hermes wrapper
 - [x] `python scripts/tests/test_hermes_control.py` passes
+- [x] `python -m pytest scripts/tests/test_skill_dispatch.py` passes
 
 ## Web UI
 - [x] `cd agentic-browser-web-ui && npm run build` succeeds
