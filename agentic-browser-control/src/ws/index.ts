@@ -1,6 +1,6 @@
 import { WebSocket, WebSocketServer } from "ws";
-import { sessionStore } from "../auth/session";
-import { forwardChat } from "../chat/forwarder";
+import { sessionStore } from "../auth/session.js";
+import { forwardChat } from "../chat/forwarder.js";
 
 export function wireWs(server: any) {
   const wss = new WebSocketServer({ server, path: "/control" });

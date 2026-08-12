@@ -43,6 +43,22 @@ npm run build
 - Control plane exposes `/v1/control/chat` and WebSocket `/control`.
 - Hermes desktop/CLI can POST prompts and receive responses through the control server.
 
+## Store submission prerequisites
+Current packaging is ready; store submission is blocked by missing credentials only.
+
+### Chrome Web Store
+1. Create a Chrome Web Store developer account.
+2. Prepare a signed ZIP from `release/agenticbrowser-extension-chrome.zip`.
+3. Required env vars: none in repo; add your own publishing secret workflow outside this repo.
+
+### Firefox AMO
+1. Use `release/agenticbrowser-extension-firefox.zip`.
+2. Required AMO vars: `AMO_API_KEY`, `JWT_ISSUER`, `JWT_SECRET`.
+3. Keep these out of version control; use local `.env` or secret store.
+
+### Control plane Hermes auth
+For local development, if HMAC auth is unavailable, use `AGENTIC_CONTROL_SECRET=demo` in PowerShell or Command Prompt. See `agentic-browser-control/README.md`.
+
 ## Notes
 - AgenticBrowser is the canonical product name throughout all repos.
 - Default ports: backend `8123`, control plane `8766`.

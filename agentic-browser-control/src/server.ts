@@ -2,8 +2,8 @@ import express from "express";
 import cors from "cors";
 import http from "http";
 import net from "node:net";
-import { wireWs } from "./ws";
-import { requireHmac } from "./middleware/auth";
+import { wireWs } from "./ws/index.js";
+import { requireHmac } from "./middleware/auth.js";
 
 const PORT = Number(process.env.PORT || 8766);
 
@@ -42,7 +42,7 @@ async function start() {
       app.post("/v1/control/chat", requireHmac, async (req, res) => {
         const { sessionId, provider, model, messages } = req.body || {};
         try {
-          const { forwardChat } = await import("./chat/forwarder");
+          const { forwardChat } = await import("./chat/forwarder.js");
           const data = await forwardChat({ sessionId, provider, model, messages: messages || [] });
           res.json({ ok: true, sessionId, provider, model, data });
         } catch (err: any) {
