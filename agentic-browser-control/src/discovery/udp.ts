@@ -21,33 +21,20 @@ export function startDiscoveryBeacon(opts: BeaconOpts = {}) {
   socket.bind(port, host, () => {
     socket.setBroadcast(true);
     socket.addMembership("239.255.255.250");
-    const payload = Buffer.from(
-      JSON.stringify({
-        service: name,
-        controlPort,
-        host: "127.0.0.1",
-        timestamp: Date.now(),
-      })
-    );
-    socket.send(payload, 0, payload.length, port, "239.255.255.250", () => {});
-    const timer = setInterval(() => {
-      const current = Buffer.from(
-        JSON.stringify({
-          service: name,
-          controlPort,
-          host: "127.0.0.1",
-          timestamp: Date.now(),
-        })
-      );
-      socket.send(current, 0, current.length, port, "239.255.255.250", () => {});
-    }, 5000);
-
-    return {
-      close: () => {
-        clearInterval(timer);
-        socket.close();
-      },
-    };
+    socket.on("message", (msg, rinfo) => {
+      const text = msg.toString("utf8").trim();
+      if (text === "DISCOVER") {
+        const response = Buffer.from(
+          JSON.stringify({
+            service: name,
+            controlPort,
+            host: "127.0.0.1",
+            timestamp: Date.now(),
+          })
+        );
+        socket.send(response, 0, response.length, rinfo.port, rinfo.address);
+      }
+    });
   });
 
   socket.on("error", (err) => {

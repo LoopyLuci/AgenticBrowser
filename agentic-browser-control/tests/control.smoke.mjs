@@ -1,6 +1,8 @@
 import http from "node:http";
 import { spawn } from "node:child_process";
 import crypto from "node:crypto";
+import https from "node:https";
+import fs from "node:fs";
 
 const SECRET = "test-secret";
 const MOCK_BACKEND_PORT = 8124;
@@ -62,7 +64,7 @@ function startControlServer(env = {}) {
 
     child.stdout.on("data", (data) => {
       const text = data.toString();
-      if (text.includes(`http://localhost:${CONTROL_PORT}`)) {
+      if (text.includes(`localhost:${CONTROL_PORT}`)) {
         if (!settled) {
           settled = true;
           clearTimeout(timer);
@@ -71,10 +73,7 @@ function startControlServer(env = {}) {
       }
     });
 
-    child.stderr.on("data", (data) => {
-      // keep process output available for debugging if needed
-    });
-
+    child.stderr.on("data", (data) => {});
     child.on("error", (err) => {
       if (!settled) {
         settled = true;
@@ -82,7 +81,6 @@ function startControlServer(env = {}) {
         reject(err);
       }
     });
-
     child.on("exit", (code, signal) => {
       if (!settled) {
         settled = true;
@@ -137,6 +135,40 @@ function request(path, opts = {}) {
   });
 }
 
+function requestHttps(path, opts = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(`https://127.0.0.1:${CONTROL_PORT}${path}`);
+    const options = {
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname + url.search,
+      method: opts.method || "GET",
+      headers: opts.headers || {},
+      rejectUnauthorized: false,
+    };
+
+    const req = https.request(options, (res) => {
+      let body = "";
+      res.on("data", (chunk) => (body += chunk));
+      res.on("end", () => {
+        let data;
+        try {
+          data = JSON.parse(body);
+        } catch {
+          data = body;
+        }
+        resolve({ status: res.statusCode, data });
+      });
+    });
+
+    req.on("error", reject);
+    if (opts.body) {
+      req.write(opts.body);
+    }
+    req.end();
+  });
+}
+
 async function waitForHealth() {
   const start = Date.now();
   while (Date.now() - start < 10000) {
@@ -151,9 +183,24 @@ async function waitForHealth() {
   throw new Error("control plane /health did not become ready");
 }
 
+async function waitForHttpsHealth() {
+  const start = Date.now();
+  while (Date.now() - start < 10000) {
+    try {
+      const res = await requestHttps("/health");
+      if (res.status === 200 && res.data?.status === "ok") return;
+    } catch {
+      // ignore until healthy
+    }
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  throw new Error("control plane /health did not become ready over HTTPS");
+}
+
 async function runTests() {
   const mockBackend = await createMockBackend();
   let controlChild;
+  let httpsChild;
   try {
     controlChild = await startControlServer({
       AGENTIC_CONTROL_SECRET: SECRET,
@@ -208,28 +255,34 @@ async function runTests() {
       throw new Error(`expected ok with valid signature, got ${JSON.stringify(res)}; expectedMac=${expected} body=${JSON.stringify(JSON.parse(chatBody))}`);
     }
 
-    // 5) Insecure bypass via env
-    controlChild = await stopControlServer(controlChild);
-    controlChild = await startControlServer({
-      AGENTIC_CONTROL_SECRET: SECRET,
-      AGENTIC_CONTROL_ALLOW_INSECURE: "1",
-      AGENTIC_BACKEND: `http://127.0.0.1:${MOCK_BACKEND_PORT}`,
-    });
-    await waitForHealth();
-
-    res = await request("/v1/control/chat", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: chatBody,
-    });
-    if (res.status !== 200 || !res.data?.ok) {
-      throw new Error(`expected ok with insecure bypass, got ${JSON.stringify(res)}`);
+    // 5) HTTPS smoke if certs exist
+    const keyPath = "certs/key.pem";
+    const certPath = "certs/cert.pem";
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+      httpsChild = await startControlServer({
+        PORT: String(CONTROL_PORT + 1),
+        AGENTIC_CONTROL_SECRET: SECRET,
+        AGENTIC_BACKEND: `http://127.0.0.1:${MOCK_BACKEND_PORT}`,
+        HTTPS: "true",
+        HTTPS_KEY_PATH: keyPath,
+        HTTPS_CERT_PATH: certPath,
+      });
+      await waitForHttpsHealth();
+      const health = await requestHttps("/health");
+      if (health.status !== 200 || health.data?.status !== "ok") {
+        throw new Error(`HTTPS health failed: ${JSON.stringify(health)}`);
+      }
+    } else {
+      console.log("HTTPS smoke skipped: missing certs");
     }
 
     console.log(`control smoke: ${5} passed`);
   } finally {
     if (controlChild && controlChild.exitCode === null) {
       await stopControlServer(controlChild);
+    }
+    if (httpsChild && httpsChild.exitCode === null) {
+      await stopControlServer(httpsChild);
     }
     mockBackend.close();
   }

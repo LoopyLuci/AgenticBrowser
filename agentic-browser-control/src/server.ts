@@ -1,12 +1,28 @@
 import express from "express";
 import cors from "cors";
 import http from "http";
+import https from "https";
+import fs from "node:fs";
 import net from "node:net";
 import { wireWs } from "./ws/index.js";
 import { requireHmac } from "./middleware/auth.js";
 import { startDiscoveryBeacon } from "./discovery/udp.js";
 
 const PORT = Number(process.env.PORT || 8766);
+
+function createServer(app: express.Express): http.Server | https.Server {
+  if (process.env.HTTPS === "true") {
+    const keyPath = process.env.HTTPS_KEY_PATH || process.env.HTTPS_KEY || "";
+    const certPath = process.env.HTTPS_CERT_PATH || process.env.HTTPS_CERT || "";
+    if (!keyPath || !certPath) {
+      throw new Error("HTTPS enabled but HTTPS_KEY_PATH/HTTPS_CERT_PATH are missing");
+    }
+    const key = fs.readFileSync(keyPath);
+    const cert = fs.readFileSync(certPath);
+    return https.createServer({ key, cert }, app);
+  }
+  return http.createServer(app);
+}
 
 type PreflightResult = { ok: boolean; error?: string };
 
@@ -75,7 +91,7 @@ async function start() {
         })
       );
 
-      const server = http.createServer(app);
+      const server = createServer(app);
       wireWs(server);
       startDiscoveryBeacon({ port, controlPort: port });
 
@@ -98,7 +114,7 @@ async function start() {
               `${process.env.AGENTIC_BACKEND || "http://localhost:8123"}/health`
             );
             console.log(
-              `AgenticBrowser control server on http://localhost:${port}`
+              `AgenticBrowser control server on ${process.env.HTTPS === "true" ? "https" : "http"}://localhost:${port}`
             );
             resolve();
           } catch (err: any) {

@@ -1,9 +1,11 @@
+from typing import Any, Dict, Optional
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
 import time
 import json
+import os
 
 from app.providers.chat import PROVIDERS
 from app.tools.registry import list_tools, get, ToolContext, autoload
@@ -33,6 +35,32 @@ autoload_providers()
 app = FastAPI(title="AgenticBrowser Backend")
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(RateLimitMiddleware)
+
+
+class MTLSMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        headers = dict(scope.get("headers") or [])
+        header_key = b"x-client-cert-present"
+        if headers.get(header_key, b"").lower() != b"true":
+            from fastapi.responses import JSONResponse
+
+            response = JSONResponse(
+                status_code=403, content={"detail": "Missing client certificate"}
+            )
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+
+if os.getenv("MTLS_ENABLED") == "true":
+    app.add_middleware(MTLSMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "chrome-extension://*"],
@@ -46,11 +74,11 @@ settings = SettingsStore()
 
 class ChatRequest(BaseModel):
     session_id: str
-    messages: List[Dict[str, Any]]
+    messages: list[dict[str, Any]]
     provider: str
     model: str
     stream: bool = False
-    tools: Optional[List[Dict[str, Any]]] = None
+    tools: Optional[list[dict[str, Any]]] = None
 
 
 class SettingsRequest(BaseModel):
@@ -121,6 +149,7 @@ def tool_execute(req: ToolRequest):
         ctx.url = req.context.get("url")
     try:
         import asyncio
+
         result = asyncio.run(tool.execute(req.arguments, ctx, confirm=req.confirm))
         audit("tool_execute", {"tool": req.name, "arguments": req.arguments, "result": result})
         return result
