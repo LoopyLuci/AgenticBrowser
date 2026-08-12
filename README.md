@@ -46,3 +46,25 @@ npm run build
 ## Notes
 - AgenticBrowser is the canonical product name throughout all repos.
 - Default ports: backend `8123`, control plane `8766`.
+- Local dev SSL certs live under `certs/`.
+
+## Live provider tests / env setup
+
+Set `OLLAMA_HOST` for local live tests, for example:
+- PowerShell: `$env:OLLAMA_HOST="http://localhost:11434"`
+- Command Prompt: `set OLLAMA_HOST=http://localhost:11434`
+- Bash: `export OLLAMA_HOST=http://localhost:11434`
+
+Backend tests:
+- `cd agentic-browser-backend && OLLAMA_HOST=http://localhost:11434 OLLAMA_MODEL=qwen2.5:0.5b .venv/Scripts/python -m pytest`
+
+Local CI:
+- `bash scripts/local-ci.sh`
+- OpenRouter/OpenAI live tests run only when `OPENROUTER_KEY` / `OPENAI_KEY` are set.
+- If Ollama is reachable at `localhost:11434`, the live Ollama smoke test runs automatically.
+
+Extension backend URL config:
+- Open the extension sidepanel Settings.
+- Save `Ollama Host` and, if needed, provider keys.
+- The sidepanel sends chat requests through the background script to the backend configured there.
+- mTLS/SSL is supported via the backend HTTPS port once SSL is enabled in your backend launch command.

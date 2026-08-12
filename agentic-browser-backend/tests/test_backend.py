@@ -98,6 +98,8 @@ def test_metrics_endpoint_returns_summary():
 
 
 def test_audit_log_emits_during_chat():
+    if not os.getenv("OLLAMA_HOST"):
+        pytest.skip("OLLAMA_HOST not set")
     r = client.post("/v1/chat", json={
         "session_id": "pytest-audit",
         "provider": "ollama",
