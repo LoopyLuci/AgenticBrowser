@@ -1,53 +1,29 @@
-# AgenticBrowser Verification Checklist
+# AgenticBrowser Verification
 
-## Extension
-- [x] `cd agentic-browser-extension && npm run build` succeeds
-- [x] `dist/manifest.json` name/version are `AgenticBrowser`
-- [x] `test/smoke.js` passes build + manifest validation
-- [ ] Load unpacked from `dist` in Chrome/Edge/Firefox
+Use the local CI pipeline only; GitHub Actions are not used.
+
+## Local CI
+From repo root, run:
+- `bash scripts/local-ci.sh`
 
 ## Backend
-- [x] `cd agentic-browser-backend && uvicorn main:app --host 0.0.0.0 --port 8123`
-- [x] `GET /health` returns `{"status":"ok"}`
-- [x] `POST /v1/settings` returns updated provider state
-- [x] `POST /v1/chat` works for configured providers
-- [x] `GET /providers` returns available/configured providers
-- [x] `GET /v1/tools` returns tool registry
-- [x] `POST /v1/tools` executes registered tools
-- [x] `pytest tests/test_backend.py -v` passes
-- [x] `pytest tests/test_observability.py -v` passes
-- [x] `pytest tests/test_rate_limit.py -v` passes
-- [x] `pytest tests/test_ssl.py -v` passes
-- [x] `pytest tests/test_supervisor.py -v` passes
+From `agentic-browser-backend`:
+- `.venv/Scripts/python -m pytest -v`
 
 ## Control plane
-- [x] `cd agentic-browser-control && npm run dev`
-- [x] `GET /health` returns `{"status":"ok"}`
-- [x] `POST /v1/control/chat` returns forwarded response
-- [x] WebSocket `/control` auth + chat flow implemented
-- [x] `npm test` passes control-plane smoke tests
+From `agentic-browser-control`:
+- `npm run build`
+- `npm test`
 
-## Hermes wrapper
-- [x] `python scripts/tests/test_hermes_control.py` passes
-- [x] `python -m pytest scripts/tests/test_skill_dispatch.py` passes
-- [x] Hermes wrapper tests: `3 passed`
-- [x] Skill dispatch + E2E tests: `2 passed`
-- [x] If skill dispatch fails, confirm control plane is running and `AGENTIC_CONTROL_SECRET` matches Hermes wrapper config
+## Extension
+From `agentic-browser-extension`:
+- `npm run build`
+- `npx playwright test tests/control-chat.spec.ts --reporter=line --project=chromium`
 
-## Web UI
-- [x] `cd agentic-browser-web-ui && npm run build` succeeds
-- [x] `dist/index.html` builds and connects to backend at `http://localhost:8123`
-
-## Packaging
-- [x] `bash scripts/package-extension.sh` creates release artifacts
-- [x] `python scripts/validate-release.py` passes
-- [ ] GitHub Actions CI workflow validates all packages on every PR
-
-## Launchers
-- [x] Bash: `bash agentic-browser-control/scripts/start.sh`
-- [x] PowerShell: `powershell -ExecutionPolicy Bypass -File agentic-browser-control/scripts/start.ps1`
-- [x] Command Prompt: `agentic-browser-control\scripts\start.cmd`
-
-## Branding
-- [x] No remaining `page-assist` product naming in shipped files
-- [x] Extension title is `AgenticBrowser`
+## Notes
+- `certs/key.pem` and `certs/cert.pem` are local test artifacts.
+- `MTLS_ENABLED=true` enables mTLS checks; real cert validation is tested in `tests/test_mtls.py`.
+- Discovery smoke uses control server startup log assertions in `agentic-browser-control/tests/discovery_smoke.py`.
+- Discord webhook tests: `agentic-browser-backend/tests/test_discord.py` and `agentic-browser-backend/tests/test_discord_webhook.py`.
+- Telegram bot smoke: `agentic-browser-backend/tests/test_telegram_bot.py`.
+- Fake provider is registered via `tests/conftest.py` + `tests/test_chat_stream.py` fixture; no import-time mutation.

@@ -1,10 +1,11 @@
 from fastapi.testclient import TestClient
 
-from app.observability.metrics import REQUEST_COUNTS
 from main import app
+from app.observability.metrics import REQUEST_COUNTS, _rate_limit_store
 
 
 def test_metrics_endpoint_reports_route_counts():
+    _rate_limit_store.clear()
     client = TestClient(app)
     client.get("/health")
     client.get("/providers")

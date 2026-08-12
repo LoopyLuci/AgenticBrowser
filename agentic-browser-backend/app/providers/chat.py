@@ -1,4 +1,5 @@
 from typing import Any, Dict, List
+
 import httpx
 
 
@@ -66,14 +67,6 @@ class OpenAIProvider(BaseProvider):
             return data.get("choices", [{}])[0].get("message", {})
 
 
-PROVIDERS = {
-    "ollama": OllamaProvider,
-    "openrouter": OpenRouterProvider,
-    "openai": OpenAIProvider,
-    "fake": lambda *args, **kwargs: FakeProvider(),
-}
-
-
 class FakeProvider(BaseProvider):
     key = "fake"
 
@@ -88,10 +81,16 @@ class FakeProvider(BaseProvider):
         return {"provider": self.key, "model": model, "message": {"content": "fake-response"}}
 
 
-def _register_fake_provider():
-    from app.providers import chat as chat_module
+PROVIDERS = {
+    "ollama": OllamaProvider,
+    "openrouter": OpenRouterProvider,
+    "openai": OpenAIProvider,
+}
 
-    chat_module.PROVIDERS["fake"] = lambda *args, **kwargs: FakeProvider()
+
+def register_test_provider(key: str, factory):
+    PROVIDERS[key] = factory
 
 
-_register_fake_provider()
+def unregister_test_provider(key: str):
+    PROVIDERS.pop(key, None)

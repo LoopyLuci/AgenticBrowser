@@ -7,6 +7,10 @@ echo "-- Backend tests --"
 cd agentic-browser-backend
 .venv/Scripts/python -m pytest tests/test_backend.py tests/test_providers.py tests/test_observability.py tests/test_rate_limit.py tests/test_ssl.py tests/test_supervisor.py -v
 
+echo "-- NixOS module syntax validation --"
+cd ..
+bash scripts/validate-nixos-module.sh
+
 echo "-- Backend live provider smoke --"
 if curl -sf http://localhost:11434/api/tags >/dev/null 2>&1; then
   OLLAMA_HOST=http://localhost:11434 OLLAMA_MODEL=qwen2.5:0.5b AGENTIC_TEST_OLLAMA=1 .venv/Scripts/python -m pytest tests/test_backend.py::test_provider_live_ollama_smoke tests/test_providers.py::test_ollama_live -v

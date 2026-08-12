@@ -6,6 +6,7 @@ from pydantic import BaseModel
 import time
 import json
 import os
+import re
 
 from app.providers.chat import PROVIDERS
 from app.tools.registry import list_tools, get, ToolContext, autoload
@@ -38,8 +39,11 @@ app.add_middleware(RateLimitMiddleware)
 
 
 class MTLSMiddleware:
-    def __init__(self, app):
+    def __init__(self, app, expected_subject_regex: str | None = None):
         self.app = app
+        self.expected_subject_regex = (
+            re.compile(expected_subject_regex) if expected_subject_regex else None
+        )
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
@@ -55,11 +59,34 @@ class MTLSMiddleware:
             )
             await response(scope, receive, send)
             return
+
+        if self.expected_subject_regex:
+            cert_header = headers.get(b"x-client-cert", b"").decode("utf-8", errors="replace")
+            if not self.expected_subject_regex.search(cert_header):
+                from fastapi.responses import JSONResponse
+
+                response = JSONResponse(
+                    status_code=403,
+                    content={"detail": "Invalid client certificate subject"},
+                )
+                await response(scope, receive, send)
+                return
+
         await self.app(scope, receive, send)
 
 
+MTLS_DEFAULT_SUBJECT_REGEX = os.getenv(
+    "MTLS_CLIENT_SUBJECT_REGEX",
+    r"CN\s*=\s*AgenticBrowser Test Client",
+)
+
+
+def _build_mtls_middleware(app):
+    return MTLSMiddleware(app, expected_subject_regex=MTLS_DEFAULT_SUBJECT_REGEX)
+
+
 if os.getenv("MTLS_ENABLED") == "true":
-    app.add_middleware(MTLSMiddleware)
+    app.add_middleware(_build_mtls_middleware)
 
 app.add_middleware(
     CORSMiddleware,
