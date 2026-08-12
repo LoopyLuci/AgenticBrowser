@@ -10,3 +10,11 @@ test("extension sidepanel bundle includes chat UI", async () => {
   const content = fs.readFileSync(js, "utf8");
   expect(content).toContain("chat");
 });
+
+test("extension sidepanel bundle includes control chat route", async () => {
+  const js = path.join(EXT_DIR, "sidepanel.js");
+  const content = fs.readFileSync(js, "utf8");
+  expect(content).toContain("control");
+  expect(content).toContain("v1");
+  expect(content).toContain("chat");
+});

@@ -30,6 +30,9 @@
 ## Hermes wrapper
 - [x] `python scripts/tests/test_hermes_control.py` passes
 - [x] `python -m pytest scripts/tests/test_skill_dispatch.py` passes
+- [x] Hermes wrapper tests: `3 passed`
+- [x] Skill dispatch + E2E tests: `2 passed`
+- [x] If skill dispatch fails, confirm control plane is running and `AGENTIC_CONTROL_SECRET` matches Hermes wrapper config
 
 ## Web UI
 - [x] `cd agentic-browser-web-ui && npm run build` succeeds

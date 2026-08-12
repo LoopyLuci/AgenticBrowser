@@ -1,6 +1,6 @@
-import asyncio
+import pytest
 
-from app.providers.discord import DiscordProvider
+from app.providers.discord import DiscordProvider, DiscordWebhook
 
 
 def test_discord_adapter_loads():
@@ -9,8 +9,23 @@ def test_discord_adapter_loads():
 
 
 def test_discord_adapter_stub_response():
-    provider = DiscordProvider()
-    message = asyncio.run(provider.chat("stub-model", [], False))
+    webhook = DiscordWebhook(id="wh-1", token="token")
+    provider = DiscordProvider(webhook)
+    message = __import__("asyncio").run(provider.chat("stub-model", [], False))
     assert message["provider"] == "discord"
     assert message["model"] == "stub-model"
     assert "content" in message["message"]
+
+
+def test_discord_adapter_requires_webhook():
+    provider = DiscordProvider()
+    with pytest.raises(RuntimeError, match="Missing webhook config"):
+        __import__("asyncio").run(provider.chat("model", [], False))
+
+
+def test_discord_webhook_returns_route_id():
+    webhook = DiscordWebhook(id="wh-1", token="token")
+    provider = DiscordProvider(webhook)
+    message = __import__("asyncio").run(provider.chat("model", [], False))
+    assert message["webhook"] == "wh-1"
+    assert message["message"]["content"].endswith("routed")

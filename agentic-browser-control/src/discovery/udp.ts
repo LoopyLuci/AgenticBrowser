@@ -19,6 +19,7 @@ export function startDiscoveryBeacon(opts: BeaconOpts = {}) {
 
   const socket = dgram.createSocket("udp4");
   socket.bind(port, host, () => {
+    console.log(`Discovery beacon listening on ${host}:${port}`);
     socket.setBroadcast(true);
     socket.addMembership("239.255.255.250");
     socket.on("message", (msg, rinfo) => {

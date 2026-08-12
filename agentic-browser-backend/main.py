@@ -214,7 +214,7 @@ async def _sse_chat(req: ChatRequest):
     start = time.time()
     full = []
     try:
-        stream = provider.chat(req.model, req.messages, True)
+        stream = await provider.chat(req.model, req.messages, True)
         async for chunk in stream:
             token = chunk.get("message", {}).get("content", "")
             if token:

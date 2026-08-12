@@ -70,4 +70,28 @@ PROVIDERS = {
     "ollama": OllamaProvider,
     "openrouter": OpenRouterProvider,
     "openai": OpenAIProvider,
+    "fake": lambda *args, **kwargs: FakeProvider(),
 }
+
+
+class FakeProvider(BaseProvider):
+    key = "fake"
+
+    async def chat(self, model: str, messages: List[Dict[str, Any]], stream: bool = False) -> Dict[str, Any]:
+        if stream:
+
+            async def _generator():
+                yield {"message": {"content": "hello "}}
+                yield {"message": {"content": "world"}}
+
+            return _generator()
+        return {"provider": self.key, "model": model, "message": {"content": "fake-response"}}
+
+
+def _register_fake_provider():
+    from app.providers import chat as chat_module
+
+    chat_module.PROVIDERS["fake"] = lambda *args, **kwargs: FakeProvider()
+
+
+_register_fake_provider()

@@ -31,14 +31,22 @@ cd ../agentic-browser-control
 npm run build
 npm test
 
+echo "-- Control typecheck --"
+cd ../agentic-browser-control
+npm run build
+npm test
+
 echo "-- Extension build + Playwright smoke --"
 cd ../agentic-browser-extension
 npm run build
 npx playwright test tests/smoke.spec.ts --reporter=line
 
-echo "-- Extension Firefox packaging validation --"
+echo "-- Windows packaging validation --"
 cd ..
+bash scripts/package-extension.sh agentic-browser-extension/dist release/agenticbrowser-extension-windows.zip
 python scripts/validate-release.py
+
+echo "-- Firefox packaging validation --"
 bash scripts/package-firefox.sh agentic-browser-extension/dist release/agenticbrowser-extension-firefox.zip
 python scripts/validate-release.py
 
