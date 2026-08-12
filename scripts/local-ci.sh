@@ -35,8 +35,13 @@ cd ../agentic-browser-extension
 npm run build
 npx playwright test tests/smoke.spec.ts --reporter=line
 
+echo "-- Extension Firefox packaging validation --"
+cd ..
+bash scripts/package-firefox.sh agentic-browser-extension/dist release/agenticbrowser-extension-firefox.zip
+python -c "import zipfile, sys; z=zipfile.ZipFile('release/agenticbrowser-extension-firefox.zip'); files=z.namelist(); required=['manifest.firefox.json','background.js','sidepanel.html']; missing=[f for f in required if f not in files]; sys.exit(1 if missing else 0)"
+
 echo "-- Web build --"
-cd ../agentic-browser-web-ui
+cd agentic-browser-web-ui
 npm run build
 
 echo "== Local CI passed =="

@@ -64,6 +64,13 @@ Workaround:
 - Start control plane with an explicit secret: `AGENTIC_CONTROL_SECRET=demo npm run start:control`
 - Call the wrapper with the same secret: `AGENTIC_CONTROL_SECRET=demo python scripts/hermes_control.py chat ...`
 
+Windows-specific checklist:
+
+1. Use PowerShell or Command Prompt; some bash contexts on Windows do not reliably export env vars into child Node processes.
+2. Verify the server sees the secret by checking its startup log for `control secret loaded` or an equivalent auth-init message.
+3. Restart after killing stale listeners on `8766` if the server is reusing state from an earlier launch.
+4. If running from Hermes Desktop, confirm the shell session matches the one where the env var was set; a new shell does not inherit the prior session’s exports.
+
 Known local limitation:
 - When launching from some Windows shell contexts, `AGENTIC_CONTROL_SECRET` may not reach the Node process. Prefer PowerShell or Command Prompt for Hermes Desktop skill dispatch testing.
 
