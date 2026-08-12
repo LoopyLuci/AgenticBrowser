@@ -50,6 +50,14 @@ jobs:
           cd agentic-browser-extension
           npm ci
           npm run build
+      - name: Extension Playwright tests
+        run: |
+          cd agentic-browser-extension
+          npx playwright test tests/smoke.spec.ts
+      - name: Windows packaging validation
+        run: |
+          bash scripts/package-firefox.sh agentic-browser-extension/dist release/agenticbrowser-extension-firefox.zip
+          python scripts/validate-release.py
       - name: Web UI build
         run: |
           cd agentic-browser-web-ui

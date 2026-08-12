@@ -30,7 +30,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client = request.client.host if request.client else "unknown"
         now = time.time()
         window = RATE_LIMIT_WINDOW
-        timestamps = [t for t in _rate_limit_store[client] if now - t < window]
+        timestamps = [t for t in _rate_limit_store.get(client, []) if now - t < window]
         _rate_limit_store[client] = timestamps
         if len(timestamps) >= RATE_LIMIT_MAX:
             return JSONResponse(status_code=429, content={"detail": "Too many requests"})

@@ -5,7 +5,7 @@ import sys
 import zipfile
 from pathlib import Path
 
-REQUIRED_FILES = [
+REQUIRED_ARTIFACTS = [
     "agenticbrowser-manifest.json",
     "agenticbrowser-sidepanel.html",
     "agenticbrowser-sidepanel.js",
@@ -40,7 +40,7 @@ def validate_release(root: Path) -> int:
     if unexpected:
         print(f"Unexpected top-level files: {unexpected}")
         failures += 1
-    missing = [f for f in REQUIRED_FILES if f not in files]
+    missing = [f for f in REQUIRED_ARTIFACTS if f not in files]
     if missing:
         print(f"Missing expected artifacts: {missing}")
         failures += 1
@@ -63,10 +63,13 @@ def validate_release(root: Path) -> int:
             print(f"manifest.json parse error: {e}")
             failures += 1
     else:
-        print("Missing manifest.json")
+        print("Missing agenticbrowser-manifest.json")
         failures += 1
 
-    for zip_name in ["agenticbrowser-extension-chrome.zip", "agenticbrowser-extension-firefox.zip"]:
+    for zip_name in [
+        "agenticbrowser-extension-chrome.zip",
+        "agenticbrowser-extension-firefox.zip",
+    ]:
         zip_path = root / zip_name
         if not zip_path.exists():
             print(f"Missing zip: {zip_name}")

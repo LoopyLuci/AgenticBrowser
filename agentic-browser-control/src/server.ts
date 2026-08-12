@@ -39,6 +39,20 @@ function isPortInUse(port: number): Promise<boolean> {
   });
 }
 
+async function waitForBackend(url: string, timeoutMs = 15000): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(url).catch(() => null);
+      if (res && res.ok) return;
+    } catch {
+      // ignore
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(`Backend health check failed: ${url}`);
+}
+
 async function start() {
   const preflightResult = await preflight();
   if (!preflightResult.ok) {
@@ -78,9 +92,18 @@ async function start() {
       });
 
       await new Promise<void>((resolve, reject) => {
-        server.listen(port, "127.0.0.1", () => {
-          console.log(`AgenticBrowser control server on http://localhost:${port}`);
-          resolve();
+        server.listen(port, "127.0.0.1", async () => {
+          try {
+            await waitForBackend(
+              `${process.env.AGENTIC_BACKEND || "http://localhost:8123"}/health`
+            );
+            console.log(
+              `AgenticBrowser control server on http://localhost:${port}`
+            );
+            resolve();
+          } catch (err: any) {
+            reject(err);
+          }
         });
         server.on("error", (err: any) => {
           if (err?.code === "EADDRINUSE") {

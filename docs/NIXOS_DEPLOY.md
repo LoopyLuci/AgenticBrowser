@@ -23,6 +23,16 @@ If mTLS is enabled, also configure:
 Run the control server on the desired Hermes mesh port. Required env vars:
 - `PORT`
 - `AGENTIC_CONTROL_SECRET` or `MESH_CLUSTER_KEY`
+- `AGENTIC_BACKEND` for backend base URL
+
+### Control plane HTTPS
+Run the control server with HTTPS by setting:
+- `HTTPS=true`
+- `HTTPS_KEY_PATH`
+- `HTTPS_CERT_PATH`
+
+Example:
+- `HTTPS=true HTTPS_KEY_PATH=/etc/agentic/key.pem HTTPS_CERT_PATH=/etc/agentic/cert.pem node dist/server.js`
 
 ## 4. Firewall
 Allow:
