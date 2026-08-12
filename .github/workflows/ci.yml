@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+        node-version: [18.x, 20.x]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install backend dependencies
+        run: |
+          cd agentic-browser-backend
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install fastapi uvicorn httpx pydantic pytest
+      - name: Backend tests
+        run: |
+          cd agentic-browser-backend
+          .venv/bin/python -m pytest tests/test_backend.py tests/test_providers.py tests/test_observability.py tests/test_rate_limit.py tests/test_ssl.py tests/test_supervisor.py -v
+      - name: Install control plane dependencies
+        run: |
+          cd agentic-browser-control
+          npm ci
+      - name: Control plane build
+        run: |
+          cd agentic-browser-control
+          npm run build
+      - name: Control plane smoke tests
+        run: |
+          cd agentic-browser-control
+          npm test
+      - name: Extension build
+        run: |
+          cd agentic-browser-extension
+          npm ci
+          npm run build
+      - name: Web UI build
+        run: |
+          cd agentic-browser-web-ui
+          npm ci
+          npm run build

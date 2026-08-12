@@ -14,32 +14,44 @@ type BeaconOpts = {
 export function startDiscoveryBeacon(opts: BeaconOpts = {}) {
   const port = opts.port ?? DISCOVERY_PORT;
   const controlPort = opts.controlPort ?? CONTROL_PORT;
-  const host = opts.host ?? "127.0.0.1";
+  const host = opts.host ?? "0.0.0.0";
   const name = opts.name ?? SERVICE_NAME;
 
   const socket = dgram.createSocket("udp4");
   socket.bind(port, host, () => {
     socket.setBroadcast(true);
     socket.addMembership("239.255.255.250");
-    const payload = JSON.stringify({
-      service: name,
-      controlPort,
-      host,
-      timestamp: Date.now(),
-    });
-    const msg = Buffer.from(payload);
-    socket.send(msg, 0, msg.length, port, "239.255.255.250", () => {});
-    setInterval(() => {
+    const payload = Buffer.from(
+      JSON.stringify({
+        service: name,
+        controlPort,
+        host: "127.0.0.1",
+        timestamp: Date.now(),
+      })
+    );
+    socket.send(payload, 0, payload.length, port, "239.255.255.250", () => {});
+    const timer = setInterval(() => {
       const current = Buffer.from(
         JSON.stringify({
           service: name,
           controlPort,
-          host,
+          host: "127.0.0.1",
           timestamp: Date.now(),
         })
       );
       socket.send(current, 0, current.length, port, "239.255.255.250", () => {});
     }, 5000);
+
+    return {
+      close: () => {
+        clearInterval(timer);
+        socket.close();
+      },
+    };
+  });
+
+  socket.on("error", (err) => {
+    console.error("Discovery beacon error:", err);
   });
 
   return {

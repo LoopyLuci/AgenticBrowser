@@ -4,6 +4,7 @@ import http from "http";
 import net from "node:net";
 import { wireWs } from "./ws/index.js";
 import { requireHmac } from "./middleware/auth.js";
+import { startDiscoveryBeacon } from "./discovery/udp.js";
 
 const PORT = Number(process.env.PORT || 8766);
 
@@ -39,6 +40,13 @@ function isPortInUse(port: number): Promise<boolean> {
 }
 
 async function start() {
+  const preflightResult = await preflight();
+  if (!preflightResult.ok) {
+    console.error("Control server preflight failed:", preflightResult.error);
+    process.exit(1);
+    return;
+  }
+
   let port = PORT;
   while (true) {
     if (!(await isPortInUse(port))) {
@@ -55,6 +63,7 @@ async function start() {
 
       const server = http.createServer(app);
       wireWs(server);
+      startDiscoveryBeacon({ port, controlPort: port });
 
       app.get("/health", (_, res) => res.json({ status: "ok" }));
       app.post("/v1/control/chat", requireHmac, async (req, res) => {

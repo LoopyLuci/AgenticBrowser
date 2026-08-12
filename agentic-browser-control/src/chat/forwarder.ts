@@ -8,7 +8,8 @@ export async function forwardChat(payload: {
   model: string;
   messages: Array<Record<string, any>>;
 }) {
-  const resp = await axios.post(`${BACKEND}/v1/chat`, {
+  const base = BACKEND.replace(/\/$/, "");
+  const resp = await axios.post(`${base}/v1/chat`, {
     session_id: payload.sessionId,
     messages: payload.messages,
     provider: payload.provider || "ollama",
