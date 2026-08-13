@@ -46,16 +46,26 @@ test("sidepanel shows empty input guard and backend error state", async () => {
   });
   const page = await context.newPage();
   const extensionId = await getExtensionId(page);
-  await page.goto(`chrome-extension://${extensionId}/sidepanel.html`);
+  await page.goto("about:blank");
+  await page.evaluate((id) => {
+    const iframe = document.createElement("iframe");
+    iframe.src = `chrome-extension://${id}/sidepanel.html`;
+    iframe.style.position = "fixed";
+    iframe.style.inset = "0";
+    iframe.style.width = "100%";
+    iframe.style.height = "100%";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+  }, extensionId);
   await new Promise((r) => setTimeout(r, 1000));
 
-  const input = page.locator("input[placeholder*='Ask anything']");
+  const input = page.frameLocator("iframe").locator("input[placeholder*='Ask anything']");
   await expect(input).toBeVisible();
 
   await input.fill("");
   await input.press("Enter");
   await new Promise((r) => setTimeout(r, 300));
-  const emptyState = page.locator("text=Ask anything…");
+  const emptyState = page.frameLocator("iframe").locator("text=Ask anything…");
   await expect(emptyState).toBeVisible();
 
   await page.route("**/v1/chat", (route) => route.fulfill({ status: 500, body: '{"detail":"offline"}' }));
@@ -63,7 +73,7 @@ test("sidepanel shows empty input guard and backend error state", async () => {
   await input.fill("hello");
   await input.press("Enter");
   await new Promise((r) => setTimeout(r, 500));
-  const errorText = page.locator("text=Error:");
+  const errorText = page.frameLocator("iframe").locator("text=Error:");
   await expect(errorText).toBeVisible();
 
   await context.close();

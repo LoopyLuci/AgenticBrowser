@@ -293,6 +293,31 @@ def history(session_id: str, limit: int = 200):
     return {"session_id": session_id, "messages": get_messages(session_id, limit)}
 
 
+@app.post("/v1/telegram/webhook/register")
+def telegram_webhook_register():
+    from app.providers.telegram_bot import TelegramBot
+
+    token = settings.telegramToken
+    webhook_url = settings.telegram_webhook_url
+    if not token:
+        raise HTTPException(status_code=400, detail="telegramToken is not configured")
+    if not webhook_url:
+        raise HTTPException(status_code=400, detail="telegram_webhook_url is not configured")
+
+    async def _register():
+        bot = TelegramBot(token, settings.telegram_allowed_chat_ids)
+        return await bot.set_webhook(webhook_url)
+
+    try:
+        import asyncio
+
+        result = asyncio.run(_register())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    audit("telegram_webhook_register", {"url": webhook_url})
+    return result
+
+
 @app.post("/v1/telegram/webhook/{token}")
 async def telegram_webhook(token: str, payload: Dict[str, Any]):
     from app.providers.telegram_bot import TelegramBot

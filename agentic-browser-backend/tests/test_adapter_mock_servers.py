@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, Mock
 
 from app.providers.discord import DiscordProvider, DiscordWebhook
 from app.providers.slack import SlackProvider
@@ -17,8 +17,9 @@ def clear_rate_limit():
 def test_discord_adapter_sends_webhook():
     webhook = DiscordWebhook(id="wh-1", token="token")
     provider = DiscordProvider(webhook)
-    response = AsyncMock()
-    response.raise_for_status = AsyncMock()
+    response = Mock()
+    response.status_code = 200
+    response.raise_for_status = Mock()
     with patch("app.providers.discord.httpx.AsyncClient") as client_cls:
         client = AsyncMock()
         client.post = AsyncMock(return_value=response)
@@ -32,8 +33,9 @@ def test_discord_adapter_sends_webhook():
 
 def test_slack_adapter_sends_webhook():
     provider = SlackProvider(webhook_url="http://example.com")
-    response = AsyncMock()
-    response.raise_for_status = AsyncMock()
+    response = Mock()
+    response.status_code = 200
+    response.raise_for_status = Mock()
     with patch("app.providers.slack.httpx.AsyncClient") as client_cls:
         client = AsyncMock()
         client.post = AsyncMock(return_value=response)
@@ -46,11 +48,8 @@ def test_slack_adapter_sends_webhook():
 
 def test_signal_adapter_sends_webhook():
     provider = SignalProvider(api_url="http://localhost:8080")
-    response = AsyncMock()
-    response.raise_for_status = AsyncMock()
     with patch("httpx.AsyncClient") as client_cls:
         client = AsyncMock()
-        client.post = AsyncMock(return_value=response)
         client_cls.return_value.__aenter__ = AsyncMock(return_value=client)
         client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
         result = __import__("asyncio").run(provider.chat("model", [{"role": "user", "content": "hello"}], False))

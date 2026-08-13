@@ -57,8 +57,9 @@ python scripts/validate-release.py
 echo "-- Hermes wrapper test --"
 python -m pytest scripts/tests/test_hermes_control.py -v
 
-echo "-- Web build --"
-cd agentic-browser-web-ui
+echo "-- Web UI tests + build --"
+cd ../agentic-browser-web-ui
+npm test
 npm run build
 
 echo "== Local CI passed =="

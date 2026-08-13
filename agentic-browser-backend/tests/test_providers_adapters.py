@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+from unittest.mock import patch
 
 from app.providers.chat import (
     OpenRouterProvider,
@@ -38,7 +39,24 @@ def test_discord_adapter_loads():
 
 def test_discord_adapter_stub_response():
     provider = DiscordProvider(DiscordWebhook(id="1", token="t"))
-    result = asyncio.run(provider.chat("model", []))
+
+    class FakeClient:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return False
+
+        async def post(self, url, **kwargs):
+            class _Resp:
+                status_code = 200
+                def raise_for_status(self):
+                    pass
+                request = None
+            return _Resp()
+
+    with patch("app.providers.discord.httpx.AsyncClient", new=lambda **kwargs: FakeClient()):
+        coro = provider.chat("model", [])
+        result = asyncio.run(coro)
     assert "Discord webhook 1 routed" in result["content"]
 
 

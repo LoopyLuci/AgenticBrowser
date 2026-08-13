@@ -21,6 +21,7 @@ export default function App() {
   const [openrouterKey, setOpenrouterKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [saveMsg, setSaveMsg] = useState("");
+  const [offline, setOffline] = useState(false);
 
   const onSend = async () => {
     const text = input.trim();
@@ -29,6 +30,7 @@ export default function App() {
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setIsSending(true);
+    setOffline(false);
     try {
       const res = await fetch("http://localhost:8123/v1/chat", {
         method: "POST",
@@ -39,12 +41,16 @@ export default function App() {
           model,
         }),
       });
+      if (!res.ok) {
+        throw new Error(`Backend error: ${res.status}`);
+      }
       const data = await res.json();
       setMessages((m) => [
         ...m,
-        { id: crypto.randomUUID(), role: "assistant", content: JSON.stringify(data, null, 2) },
+        { id: crypto.randomUUID(), role: "assistant", content: data.message?.content ?? JSON.stringify(data, null, 2) },
       ]);
     } catch (err) {
+      setOffline(true);
       setMessages((m) => [...m, { id: crypto.randomUUID(), role: "assistant", content: `Error: ${(err as Error).message}` }]);
     } finally {
       setIsSending(false);
@@ -82,6 +88,11 @@ export default function App() {
       {view === "chat" ? (
         <main className="flex-1 overflow-y-auto px-6 py-4">
           <div className="max-w-3xl mx-auto space-y-4">
+            {offline && (
+              <div className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
+                Backend unreachable. Check localhost:8123 and try again.
+              </div>
+            )}
             {messages.length === 0 && (
               <div className="h-[60vh] grid place-items-center text-center">
                 <div>
