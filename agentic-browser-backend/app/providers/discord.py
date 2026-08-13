@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 
@@ -20,13 +20,11 @@ class DiscordProvider:
     async def chat(self, model: str, messages: List[Dict[str, Any]], stream: bool = False) -> Dict[str, Any]:
         if not self.webhook:
             raise RuntimeError("Missing webhook config")
+        text = messages[-1].get("content", "") if messages else ""
         return {
+            "content": f"Discord webhook {self.webhook.id} routed: {text}",
             "provider": self.key,
             "model": model,
-            "message": {
-                "content": f"Discord webhook {self.webhook.id} routed"
-            },
-            "finish_reason": "ok",
             "webhook": self.webhook.id,
         }
 

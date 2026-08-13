@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 
 
@@ -21,10 +21,9 @@ class SlackProvider:
             raise RuntimeError("Missing Slack webhook URL")
         text = messages[-1].get("content", "") if messages else ""
         return {
+            "content": f"Slack bridge: {text}",
             "provider": self.key,
             "model": model,
-            "message": {"content": f"Slack bridge: {text}"},
-            "finish_reason": "ok",
             "webhook": self.webhook_url,
         }
 

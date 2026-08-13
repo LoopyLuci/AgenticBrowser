@@ -81,13 +81,18 @@ def test_mtls_middleware_validates_client_cert_subject(monkeypatch):
 
 
 def test_mtls_middleware_rejects_wrong_subject_regex():
-    app_test = MTLSMiddleware(FakeApp(), expected_subject_regex="CN=other")
-    scope = {"type": "http", "headers": [(b"x-client-cert-present", b"true"), (b"x-client-cert", b"CN=AgenticBrowser Test Client")]}
+    import os
+    os.environ["MTLS_ENABLED"] = "true"
+    try:
+        app_test = MTLSMiddleware(FakeApp(), expected_subject_regex="CN=other")
+        scope = {"type": "http", "headers": [(b"x-client-cert-present", b"true"), (b"x-client-cert", b"CN=AgenticBrowser Test Client")]}
 
-    received = []
-    async def receive(): return {}
-    async def send(message): received.append(message)
+        received = []
+        async def receive(): return {}
+        async def send(message): received.append(message)
 
-    __import__("asyncio").run(app_test(scope, receive, send))
-    start = next(msg for msg in received if msg.get("type") == "http.response.start")
-    assert start["status"] == 403
+        __import__("asyncio").run(app_test(scope, receive, send))
+        start = next(msg for msg in received if msg.get("type") == "http.response.start")
+        assert start["status"] == 403
+    finally:
+        os.environ.pop("MTLS_ENABLED", None)

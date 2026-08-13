@@ -131,6 +131,12 @@ class TelegramBot:
     async def handle_message(self, update: TelegramUpdate, text: str) -> str:
         return f"Echo: {text}"
 
+    async def chat(self, model: str, messages: List[Dict[str, Any]], stream: bool = False) -> Dict[str, Any]:
+        last = messages[-1].get("content", "") if messages else ""
+        update = TelegramUpdate(update_id=0, chat_id=0, text=last)
+        reply = await self.handle_update(update)
+        return {"content": reply}
+
     async def start(self) -> None:
         self._running = True
         self._task = asyncio.create_task(self._run())

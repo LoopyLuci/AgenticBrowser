@@ -41,14 +41,18 @@ app.add_middleware(RateLimitMiddleware)
 class MTLSMiddleware:
     def __init__(self, app, expected_subject_regex: str | None = None):
         self.app = app
-        self.expected_subject_regex = (
-            re.compile(expected_subject_regex) if expected_subject_regex else None
-        )
+        self.expected_subject_regex_raw = expected_subject_regex
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        if os.getenv("MTLS_ENABLED") != "true":
+            await self.app(scope, receive, send)
+            return
+        expected_subject_regex = os.getenv(
+            "MTLS_CLIENT_SUBJECT_REGEX", self.expected_subject_regex_raw or ""
+        ) or None
         headers = dict(scope.get("headers") or [])
         header_key = b"x-client-cert-present"
         if headers.get(header_key, b"").lower() != b"true":
@@ -60,9 +64,9 @@ class MTLSMiddleware:
             await response(scope, receive, send)
             return
 
-        if self.expected_subject_regex:
+        if expected_subject_regex:
             cert_header = headers.get(b"x-client-cert", b"").decode("utf-8", errors="replace")
-            if not self.expected_subject_regex.search(cert_header):
+            if not re.search(expected_subject_regex, cert_header):
                 from fastapi.responses import JSONResponse
 
                 response = JSONResponse(
@@ -85,8 +89,7 @@ def _build_mtls_middleware(app):
     return MTLSMiddleware(app, expected_subject_regex=MTLS_DEFAULT_SUBJECT_REGEX)
 
 
-if os.getenv("MTLS_ENABLED") == "true":
-    app.add_middleware(_build_mtls_middleware)
+app.add_middleware(_build_mtls_middleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -201,6 +204,8 @@ async def chat(req: ChatRequest):
         provider = provider_cls(settings.openrouter_key)
     elif req.provider == "openai":
         provider = provider_cls(settings.openai_key)
+    elif req.provider == "telegram":
+        provider = provider_cls(settings.telegram_token, settings.telegram_allowed_chat_ids)
     else:
         provider = provider_cls()
 
@@ -235,6 +240,8 @@ async def _sse_chat(req: ChatRequest):
         provider = provider_cls(settings.openrouter_key)
     elif req.provider == "openai":
         provider = provider_cls(settings.openai_key)
+    elif req.provider == "telegram":
+        provider = provider_cls(settings.telegram_token, settings.telegram_allowed_chat_ids)
     else:
         provider = provider_cls()
 

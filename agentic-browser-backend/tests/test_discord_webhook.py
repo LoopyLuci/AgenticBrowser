@@ -1,3 +1,5 @@
+import pytest
+
 from fastapi.testclient import TestClient
 
 from app.providers.discord import create_app
@@ -11,4 +13,4 @@ def test_discord_webhook_receives_payload():
     body = r.json()
     assert body["provider"] == "discord"
     assert body["webhook"] == "wh-1"
-    assert body["message"]["content"].endswith("routed")
+    assert "Discord webhook wh-1 routed" in body["content"]

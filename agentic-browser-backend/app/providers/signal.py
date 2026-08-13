@@ -19,10 +19,9 @@ class SignalProvider:
     async def chat(self, model: str, messages: List[Dict[str, Any]], stream: bool = False) -> Dict[str, Any]:
         text = messages[-1].get("content", "") if messages else ""
         return {
+            "content": f"Signal bridge: {text}",
             "provider": self.key,
             "model": model,
-            "message": {"content": f"Signal bridge: {text}"},
-            "finish_reason": "ok",
             "api_url": self.api_url,
         }
 
