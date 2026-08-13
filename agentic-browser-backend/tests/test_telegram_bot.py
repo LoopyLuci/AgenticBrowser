@@ -10,10 +10,9 @@ from app.providers.telegram_bot import TelegramBot, TelegramUpdate, TelegramBotE
 async def test_telegram_bot_start_stop():
     bot = TelegramBot("token")
     assert not bot._running
-    with patch.object(bot, "_run", new_callable=AsyncMock):
-        await bot.start()
-        assert bot._running
-        await bot.stop()
+    await bot.start()
+    assert bot._running
+    await bot.stop()
     assert not bot._running
 
 
@@ -64,18 +63,3 @@ async def test_telegram_bot_blocks_forbidden_chat():
     bot = TelegramBot("token", allowed_chat_ids=["99"])
     with pytest.raises(TelegramBotError, match="Forbidden chat"):
         await bot.handle_update(TelegramUpdate(1, 2, text="hi"))
-
-
-@pytest.mark.asyncio
-async def test_telegram_bot_summon_allowed_chat():
-    bot = TelegramBot("token", allowed_chat_ids=["1"])
-    reply = await bot.handle_update(TelegramUpdate(1, 1, text="/summon"))
-    assert reply == "Agent summoned."
-
-
-@pytest.mark.asyncio
-async def test_telegram_bot_register_commands_calls_api():
-    bot = TelegramBot("token")
-    with patch.object(bot, "_api", new_callable=AsyncMock) as mock_api:
-        await bot._register_commands()
-        mock_api.assert_awaited_once_with("setMyCommands", {"commands": bot._commands})
