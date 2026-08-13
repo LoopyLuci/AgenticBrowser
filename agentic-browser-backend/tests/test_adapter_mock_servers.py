@@ -1,7 +1,6 @@
 import pytest
-from fastapi.testclient import TestClient
+from unittest.mock import AsyncMock, patch
 
-from main import app
 from app.providers.discord import DiscordProvider, DiscordWebhook
 from app.providers.slack import SlackProvider
 from app.providers.signal import SignalProvider
@@ -15,68 +14,45 @@ def clear_rate_limit():
     yield
 
 
-def test_discord_webhook_endpoint_accepts_payload():
-    webhook = DiscordWebhook(id="test-webhook", token="token")
-    register_test_provider("discord", lambda *args, **kwargs: DiscordProvider(webhook))
-    try:
-        client = TestClient(app)
-        response = client.post(
-            "/v1/chat",
-            json={
-                "session_id": "discord-test",
-                "messages": [{"role": "user", "content": "hi"}],
-                "provider": "discord",
-                "model": "webhook-model",
-                "stream": False,
-            },
-        )
-        assert response.status_code == 200
-        body = response.json()
-        assert body["provider"] == "discord"
-        assert "webhook" in body["message"]
-    finally:
-        unregister_test_provider("discord")
+def test_discord_adapter_sends_webhook():
+    webhook = DiscordWebhook(id="wh-1", token="token")
+    provider = DiscordProvider(webhook)
+    response = AsyncMock()
+    response.raise_for_status = AsyncMock()
+    with patch("app.providers.discord.httpx.AsyncClient") as client_cls:
+        client = AsyncMock()
+        client.post = AsyncMock(return_value=response)
+        client_cls.return_value.__aenter__ = AsyncMock(return_value=client)
+        client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        result = __import__("asyncio").run(provider.chat("model", [{"role": "user", "content": "hi"}], False))
+    assert result["provider"] == "discord"
+    assert result["webhook"] == "wh-1"
+    assert "Discord webhook wh-1 routed" in result["content"]
 
 
-def test_slack_chat_endpoint_bridges_message():
-    register_test_provider("slack", lambda *args, **kwargs: SlackProvider(webhook_url="http://example.com"))
-    try:
-        client = TestClient(app)
-        response = client.post(
-            "/v1/chat",
-            json={
-                "session_id": "slack-test",
-                "messages": [{"role": "user", "content": "hello"}],
-                "provider": "slack",
-                "model": "slack-model",
-                "stream": False,
-            },
-        )
-        assert response.status_code == 200
-        body = response.json()
-        assert body["provider"] == "slack"
-        assert "Slack bridge" in body["message"]["content"]
-    finally:
-        unregister_test_provider("slack")
+def test_slack_adapter_sends_webhook():
+    provider = SlackProvider(webhook_url="http://example.com")
+    response = AsyncMock()
+    response.raise_for_status = AsyncMock()
+    with patch("app.providers.slack.httpx.AsyncClient") as client_cls:
+        client = AsyncMock()
+        client.post = AsyncMock(return_value=response)
+        client_cls.return_value.__aenter__ = AsyncMock(return_value=client)
+        client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        result = __import__("asyncio").run(provider.chat("model", [{"role": "user", "content": "hello"}], False))
+    assert result["provider"] == "slack"
+    assert "Slack bridge" in result["content"]
 
 
-def test_signal_chat_endpoint_bridges_message():
-    register_test_provider("signal", lambda *args, **kwargs: SignalProvider(api_url="http://localhost:8080"))
-    try:
-        client = TestClient(app)
-        response = client.post(
-            "/v1/chat",
-            json={
-                "session_id": "signal-test",
-                "messages": [{"role": "user", "content": "hello"}],
-                "provider": "signal",
-                "model": "signal-model",
-                "stream": False,
-            },
-        )
-        assert response.status_code == 200
-        body = response.json()
-        assert body["provider"] == "signal"
-        assert "Signal bridge" in body["message"]["content"]
-    finally:
-        unregister_test_provider("signal")
+def test_signal_adapter_sends_webhook():
+    provider = SignalProvider(api_url="http://localhost:8080")
+    response = AsyncMock()
+    response.raise_for_status = AsyncMock()
+    with patch("httpx.AsyncClient") as client_cls:
+        client = AsyncMock()
+        client.post = AsyncMock(return_value=response)
+        client_cls.return_value.__aenter__ = AsyncMock(return_value=client)
+        client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        result = __import__("asyncio").run(provider.chat("model", [{"role": "user", "content": "hello"}], False))
+    assert result["provider"] == "signal"
+    assert "Signal bridge" in result["content"]

@@ -1,40 +1,67 @@
+import json
 import os
-from typing import Optional
+import sqlite3
+from pathlib import Path
+from threading import Lock
+from typing import Any, Dict, Optional
+
+SETTINGS_DB_PATH = os.getenv("SETTINGS_DB_PATH", str(Path(__file__).resolve().parents[2] / "data" / "settings.db"))
+_SETTINGS_LOCK = Lock()
+
+
+def _ensure_db(db_path: str) -> sqlite3.Connection:
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    return conn
 
 
 class SettingsStore:
-    ollama_host: str = "http://localhost:11434"
-    openrouter_key: str = ""
-    openai_key: str = ""
-    telegram_token: str = ""
-    telegram_allowed_chat_ids: list[str] = []
+    def __init__(self, db_path: Optional[str] = None) -> None:
+        self._db_path = db_path or SETTINGS_DB_PATH
+        self._conn = _ensure_db(self._db_path)
+        self._lock = Lock()
 
-    def __init__(self):
-        self.ollama_host = os.getenv("OLLAMA_HOST", self.ollama_host)
-        self.openrouter_key = os.getenv("OPENROUTER_KEY", self.openrouter_key)
-        self.openai_key = os.getenv("OPENAI_KEY", self.openai_key)
-        self.telegram_token = os.getenv("TELEGRAM_BOT_TOKEN", self.telegram_token)
-        raw = os.getenv("TELEGRAM_ALLOWED_CHAT_IDS", "")
-        if raw:
-            self.telegram_allowed_chat_ids = [part.strip() for part in raw.split(",") if part.strip()]
+    def __getattr__(self, item: str) -> Any:
+        try:
+            return self.get(item)
+        except AttributeError:
+            raise AttributeError(f"SettingsStore object has no attribute '{item}'")
 
-    def to_dict(self):
-        return {
-            "ollama": {"base": self.ollama_host},
-            "openrouter": {"key_set": bool(self.openrouter_key)},
-            "openai": {"key_set": bool(self.openai_key)},
-            "telegram": {
-                "token_set": bool(self.telegram_token),
-                "allowed_chat_ids": self.telegram_allowed_chat_ids,
-            },
-        }
+    def get(self, key: str, default: Any = None) -> Any:
+        row = self._conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+        if not row:
+            return default
+        value = row[0]
+        try:
+            return json.loads(value)
+        except Exception:
+            return value
 
-    def update(self, ollama_host: Optional[str] = None, openrouter_key: Optional[str] = None, openai_key: Optional[str] = None, telegram_token: Optional[str] = None):
-        if ollama_host:
-            self.ollama_host = ollama_host
-        if openrouter_key:
-            self.openrouter_key = openrouter_key
-        if openai_key:
-            self.openai_key = openai_key
-        if telegram_token:
-            self.telegram_token = telegram_token
+    def set(self, key: str, value: Any) -> None:
+        payload = json.dumps(value)
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO settings(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (key, payload),
+            )
+            self._conn.commit()
+
+    def to_dict(self) -> Dict[str, Any]:
+        rows = self._conn.execute("SELECT key, value FROM settings").fetchall()
+        out: Dict[str, Any] = {}
+        for key, value in rows:
+            try:
+                out[key] = json.loads(value)
+            except Exception:
+                out[key] = value
+        return out

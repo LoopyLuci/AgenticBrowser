@@ -46,9 +46,9 @@ def test_settings_store_defaults_and_update():
     r = client.post("/v1/settings", json={"ollamaHost": "http://localhost:11434", "openrouterKey": "demo", "openaiKey": "demo"})
     assert r.status_code == 200
     body = r.json()
-    assert body["ollama"]["base"] == "http://localhost:11434"
-    assert body["openrouter"]["key_set"] is True
-    assert body["openai"]["key_set"] is True
+    assert body["ollamaHost"] == "http://localhost:11434"
+    assert body["openrouterKey"] == "demo"
+    assert body["openaiKey"] == "demo"
 
 
 def test_state_round_trip():

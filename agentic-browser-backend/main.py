@@ -141,17 +141,13 @@ def providers():
 @app.post("/v1/settings")
 def update_settings(req: SettingsRequest):
     if req.ollamaHost:
-        settings.update(req.ollamaHost, settings.openrouter_key, settings.openai_key)
-        set_setting("ollamaHost", req.ollamaHost)
+        settings.set("ollamaHost", req.ollamaHost)
     if req.openrouterKey:
-        settings.update(settings.ollama_host, req.openrouterKey, settings.openai_key)
-        set_setting("openrouterKey", req.openrouterKey)
+        settings.set("openrouterKey", req.openrouterKey)
     if req.openaiKey:
-        settings.update(settings.ollama_host, settings.openrouter_key, req.openaiKey)
-        set_setting("openaiKey", req.openaiKey)
+        settings.set("openaiKey", req.openaiKey)
     if req.telegramToken:
-        settings.update(settings.ollama_host, settings.openrouter_key, settings.openai_key, req.telegramToken)
-        set_setting("telegramToken", req.telegramToken)
+        settings.set("telegramToken", req.telegramToken)
     audit("settings_update", {"provider_state": settings.to_dict()})
     return settings.to_dict()
 

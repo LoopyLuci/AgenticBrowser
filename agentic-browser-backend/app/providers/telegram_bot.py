@@ -1,4 +1,3 @@
-"""Telegram bot capability for AgenticBrowser."""
 from __future__ import annotations
 
 import asyncio
@@ -8,6 +7,8 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from typing import Any
+
+from fastapi import FastAPI, HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,8 @@ class TelegramBot:
             {"command": "summon", "description": "Summon the agent in allowed chats"},
         ]
 
-    async def _api(self, method: str, payload: dict[str, Any]) -> dict[str, Any]:
-        url = f"https://api.telegram.org/bot{self.token}/{method}"
+    def _request(self, payload: dict[str, Any]) -> dict[str, Any]:
+        url = f"https://api.telegram.org/bot{self.token}/"
         data = json.dumps(payload).encode()
         req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
         try:
@@ -49,6 +50,20 @@ class TelegramBot:
             raise TelegramBotError(f"Telegram API error: {exc.code} {exc.reason}") from exc
         except urllib.error.URLError as exc:
             raise TelegramBotError(f"Telegram network error: {exc.reason}") from exc
+
+    async def _api(self, method: str, payload: dict[str, Any]) -> dict[str, Any]:
+        payload.setdefault("method", method)
+        return await asyncio.to_thread(self._request, payload)
+
+    async def set_webhook(self, url: str) -> dict[str, Any]:
+        return await self._api("setWebhook", {"url": url})
+
+    async def delete_webhook(self) -> dict[str, Any]:
+        return await self._api("deleteWebhook", {})
+
+    async def process_webhook_update(self, payload: dict[str, Any]) -> dict[str, Any]:
+        await self._process(payload)
+        return {"ok": True}
 
     async def _register_commands(self) -> None:
         await self._api("setMyCommands", {"commands": self._commands})
@@ -131,7 +146,7 @@ class TelegramBot:
     async def handle_message(self, update: TelegramUpdate, text: str) -> str:
         return f"Echo: {text}"
 
-    async def chat(self, model: str, messages: List[Dict[str, Any]], stream: bool = False) -> Dict[str, Any]:
+    async def chat(self, model: str, messages: list[dict[str, Any]], stream: bool = False) -> dict[str, Any]:
         last = messages[-1].get("content", "") if messages else ""
         update = TelegramUpdate(update_id=0, chat_id=0, text=last)
         reply = await self.handle_update(update)
@@ -151,3 +166,20 @@ class TelegramBot:
                 pass
             self._task = None
         logger.info("Telegram bot stopped")
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="Telegram Bot")
+
+    @app.get("/health")
+    def health() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.post("/webhook/{token}")
+    async def telegram_webhook(token: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if not token:
+            raise HTTPException(status_code=400, detail="Missing bot token")
+        bot = TelegramBot(token)
+        return await bot.process_webhook_update(payload)
+
+    return app

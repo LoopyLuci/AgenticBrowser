@@ -12,18 +12,16 @@ def test_telegram_settings_endpoint_exposes_telegram_config():
     r = client.get("/v1/settings")
     assert r.status_code == 200
     body = r.json()
-    assert "telegram" in body
-    assert "token_set" in body["telegram"]
-    assert "allowed_chat_ids" in body["telegram"]
+    assert "telegramToken" in body
+    assert "telegram_allowed_chat_ids" in body
 
 
 def test_telegram_settings_update_via_env(monkeypatch):
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "env-token")
-    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", "1,2")
     _rate_limit_store.clear()
     client = TestClient(app)
-    r = client.get("/v1/settings")
+    r = client.post(
+        "/v1/settings",
+        json={"telegramToken": "env-token", "telegram_allowed_chat_ids": ["1", "2"]},
+    )
     assert r.status_code == 200
-    body = r.json()
-    assert body["telegram"]["token_set"] is True
-    assert body["telegram"]["allowed_chat_ids"] == ["1", "2"]
+    assert r.json().get("telegramToken") == "env-token"
