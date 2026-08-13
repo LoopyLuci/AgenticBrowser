@@ -92,6 +92,14 @@ Load `agentic-browser-extension/dist` as an unpacked extension in Brave/Chrome.
 ### Run together
 Start the backend first, then the web UI, then load the extension. The sidepanel and web UI both talk to `http://localhost:8123`.
 
+## Local CI
+Run the on-device pipeline from the repo root:
+- Bash: `bash scripts/local-ci.sh`
+- PowerShell: `pwsh scripts/local-ci.ps1`
+- PowerShell watch mode: `pwsh scripts/local-ci.ps1 -Watch`
+
+Reports are written to `reports/ci.log` and `reports/results.jsonl`.
+
 ## Tests
 - Backend: `cd agentic-browser-backend && .venv/Scripts/python -m pytest`
 - Control plane: `cd agentic-browser-control && npm run build && npm test`
