@@ -151,11 +151,7 @@ def update_settings(req: SettingsRequest):
 
 @app.get("/v1/settings")
 def read_settings():
-    return {
-        "ollamaHost": get_setting("ollamaHost") or settings.ollama_host,
-        "openrouterKey": get_setting("openrouterKey") or settings.openrouter_key,
-        "openaiKey": get_setting("openaiKey") or settings.openai_key,
-    }
+    return settings.to_dict()
 
 
 @app.get("/v1/tools")
