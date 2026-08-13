@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install --with-deps"
   },
   "dependencies": {
     "framer-motion": "^11.0.0",
