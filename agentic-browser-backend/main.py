@@ -116,6 +116,8 @@ class SettingsRequest(BaseModel):
     openrouterKey: Optional[str] = None
     openaiKey: Optional[str] = None
     telegramToken: Optional[str] = None
+    telegram_allowed_chat_ids: Optional[list[str]] = None
+    telegram_webhook_url: Optional[str] = None
 
 
 class ToolRequest(BaseModel):
@@ -127,7 +129,23 @@ class ToolRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    provider_state = {}
+    try:
+        provider_state = settings.to_dict()
+    except Exception:
+        pass
+    return {
+        "status": "ok",
+        "providers": {
+            "ollama": bool(provider_state.get("ollama_host")),
+            "openrouter": bool(provider_state.get("openrouter_key")),
+            "openai": bool(provider_state.get("openai_key")),
+            "telegram": bool(provider_state.get("telegram_token")),
+            "discord": False,
+            "slack": False,
+            "signal": False,
+        },
+    }
 
 
 @app.get("/providers")
@@ -148,6 +166,10 @@ def update_settings(req: SettingsRequest):
         settings.set("openaiKey", req.openaiKey)
     if req.telegramToken:
         settings.set("telegramToken", req.telegramToken)
+    if req.telegram_allowed_chat_ids is not None:
+        settings.set("telegram_allowed_chat_ids", req.telegram_allowed_chat_ids)
+    if req.telegram_webhook_url:
+        settings.set("telegram_webhook_url", req.telegram_webhook_url)
     audit("settings_update", {"provider_state": settings.to_dict()})
     return settings.to_dict()
 
@@ -195,13 +217,13 @@ async def chat(req: ChatRequest):
         append_message(req.session_id, msg["role"], msg["content"])
 
     if req.provider == "ollama":
-        provider = provider_cls(settings.ollama_host)
+        provider = provider_cls(settings.ollamaHost)
     elif req.provider == "openrouter":
-        provider = provider_cls(settings.openrouter_key)
+        provider = provider_cls(settings.openrouterKey)
     elif req.provider == "openai":
-        provider = provider_cls(settings.openai_key)
+        provider = provider_cls(settings.openaiKey)
     elif req.provider == "telegram":
-        provider = provider_cls(settings.telegram_token, settings.telegram_allowed_chat_ids)
+        provider = provider_cls(settings.telegramToken, settings.telegram_allowed_chat_ids)
     else:
         provider = provider_cls()
 
@@ -231,13 +253,13 @@ async def _sse_chat(req: ChatRequest):
         append_message(req.session_id, msg["role"], msg["content"])
 
     if req.provider == "ollama":
-        provider = provider_cls(settings.ollama_host)
+        provider = provider_cls(settings.ollamaHost)
     elif req.provider == "openrouter":
-        provider = provider_cls(settings.openrouter_key)
+        provider = provider_cls(settings.openrouterKey)
     elif req.provider == "openai":
-        provider = provider_cls(settings.openai_key)
+        provider = provider_cls(settings.openaiKey)
     elif req.provider == "telegram":
-        provider = provider_cls(settings.telegram_token, settings.telegram_allowed_chat_ids)
+        provider = provider_cls(settings.telegramToken, settings.telegram_allowed_chat_ids)
     else:
         provider = provider_cls()
 
@@ -269,6 +291,16 @@ async def chat_stream(req: ChatRequest):
 def history(session_id: str, limit: int = 200):
     get_or_create_session(session_id)
     return {"session_id": session_id, "messages": get_messages(session_id, limit)}
+
+
+@app.post("/v1/telegram/webhook/{token}")
+async def telegram_webhook(token: str, payload: Dict[str, Any]):
+    from app.providers.telegram_bot import TelegramBot
+
+    if not token or token != settings.telegramToken:
+        raise HTTPException(status_code=404, detail="Not found")
+    bot = TelegramBot(token, settings.telegram_allowed_chat_ids)
+    return await bot.process_webhook_update(payload)
 
 
 @app.post("/v1/state/export")

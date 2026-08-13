@@ -63,6 +63,41 @@ Before manual upload, run:
 ### Control plane Hermes auth
 For local development, if HMAC auth is unavailable, use `AGENTIC_CONTROL_SECRET=demo` in PowerShell or Command Prompt. See `agentic-browser-control/README.md`.
 
+## Local development
+
+### Backend
+```bash
+cd agentic-browser-backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8123
+```
+
+### Web UI
+```bash
+cd agentic-browser-web-ui
+npm install
+npm run dev
+```
+
+### Extension
+```bash
+cd agentic-browser-extension
+npm install
+npm run build
+```
+Load `agentic-browser-extension/dist` as an unpacked extension in Brave/Chrome.
+
+### Run together
+Start the backend first, then the web UI, then load the extension. The sidepanel and web UI both talk to `http://localhost:8123`.
+
+## Tests
+- Backend: `cd agentic-browser-backend && .venv/Scripts/python -m pytest`
+- Control plane: `cd agentic-browser-control && npm run build && npm test`
+- Extension: `cd agentic-browser-extension && HEADLESS=true npx playwright test`
+- Web UI: `cd agentic-browser-web-ui && npm test`
+
 ## Notes
 - AgenticBrowser is the canonical product name throughout all repos.
 - Default ports: backend `8123`, control plane `8766`.

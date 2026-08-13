@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -26,7 +27,13 @@ class TelegramUpdate:
 
 
 class TelegramBot:
+    RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
+    MAX_RETRIES = 4
+    BACKOFF_BASE = 0.5
+
     def __init__(self, token: str, allowed_chat_ids: list[str] | None = None):
+        if not token:
+            raise ValueError("Telegram bot token is required")
         self.token = token
         self.allowed_chat_ids = {str(chat_id) for chat_id in (allowed_chat_ids or [])}
         self._running = False
@@ -39,8 +46,13 @@ class TelegramBot:
             {"command": "summon", "description": "Summon the agent in allowed chats"},
         ]
 
-    def _request(self, payload: dict[str, Any]) -> dict[str, Any]:
-        url = f"https://api.telegram.org/bot{self.token}/"
+    def _validate_url(self, url: str) -> None:
+        parsed = urllib.request.urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise TelegramBotError(f"Invalid Telegram webhook URL: {url}")
+
+    def _request(self, method: str, payload: dict[str, Any]) -> dict[str, Any]:
+        url = f"https://api.telegram.org/bot{self.token}/{method}"
         data = json.dumps(payload).encode()
         req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
         try:
@@ -51,11 +63,26 @@ class TelegramBot:
         except urllib.error.URLError as exc:
             raise TelegramBotError(f"Telegram network error: {exc.reason}") from exc
 
+    async def _api_with_retry(self, method: str, payload: dict[str, Any]) -> dict[str, Any]:
+        last_error: Exception | None = None
+        for attempt in range(1, self.MAX_RETRIES + 1):
+            try:
+                return await asyncio.to_thread(self._request, method, payload)
+            except TelegramBotError as exc:
+                last_error = exc
+                if attempt == self.MAX_RETRIES:
+                    break
+                sleep = self.BACKOFF_BASE * (2 ** (attempt - 1))
+                logger.warning("Telegram %s failed (attempt %s/%s), retrying in %ss", method, attempt, self.MAX_RETRIES, sleep)
+                await asyncio.sleep(sleep)
+        raise last_error  # type: ignore[misc]
+
     async def _api(self, method: str, payload: dict[str, Any]) -> dict[str, Any]:
         payload.setdefault("method", method)
-        return await asyncio.to_thread(self._request, payload)
+        return await self._api_with_retry(method, payload)
 
     async def set_webhook(self, url: str) -> dict[str, Any]:
+        self._validate_url(url)
         return await self._api("setWebhook", {"url": url})
 
     async def delete_webhook(self) -> dict[str, Any]:
@@ -183,3 +210,4 @@ def create_app() -> FastAPI:
         return await bot.process_webhook_update(payload)
 
     return app
+

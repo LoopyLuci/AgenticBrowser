@@ -17,6 +17,7 @@ def clear_rate_limit():
 
 def test_telegram_chat_endpoint_returns_reply():
     client = TestClient(app)
+    client.post("/v1/settings", json={"telegramToken": "fake-token"})
     with patch.object(TelegramBot, "handle_update", new_callable=AsyncMock, return_value="Echo: hi"):
         response = client.post(
             "/v1/chat",
