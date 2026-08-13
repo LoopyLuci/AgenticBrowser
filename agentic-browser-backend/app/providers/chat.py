@@ -2,6 +2,11 @@ from typing import Any, Dict, List
 
 import httpx
 
+from app.providers.discord import DiscordProvider, DiscordWebhook
+from app.providers.slack import SlackProvider
+from app.providers.signal import SignalProvider
+from app.providers.telegram_bot import TelegramBot
+
 
 class BaseProvider:
     key: str = ""
@@ -85,6 +90,11 @@ PROVIDERS = {
     "ollama": OllamaProvider,
     "openrouter": OpenRouterProvider,
     "openai": OpenAIProvider,
+    "fake": FakeProvider,
+    "discord": DiscordProvider,
+    "slack": SlackProvider,
+    "signal": SignalProvider,
+    "telegram": TelegramBot,
 }
 
 

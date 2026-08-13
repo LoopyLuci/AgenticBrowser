@@ -1,54 +1,81 @@
+import asyncio
+from unittest.mock import AsyncMock, patch
+
 import pytest
 
 from app.providers.telegram_bot import TelegramBot, TelegramUpdate, TelegramBotError
 
 
-def test_telegram_bot_start_stop():
+@pytest.mark.asyncio
+async def test_telegram_bot_start_stop():
     bot = TelegramBot("token")
     assert not bot._running
-    assert __import__("asyncio").run(bot.start()) is None
-    assert bot._running
-    assert __import__("asyncio").run(bot.stop()) is None
+    with patch.object(bot, "_run", new_callable=AsyncMock):
+        await bot.start()
+        assert bot._running
+        await bot.stop()
     assert not bot._running
 
 
-def test_telegram_bot_handle_command_start():
+@pytest.mark.asyncio
+async def test_telegram_bot_handle_command_start():
     bot = TelegramBot("token")
-    reply = __import__("asyncio").run(bot.handle_update(TelegramUpdate(1, 2, text="/start")))
+    reply = await bot.handle_update(TelegramUpdate(1, 2, text="/start"))
     assert reply == "AgenticBrowser Telegram bot is ready."
 
 
-def test_telegram_bot_handle_command_help():
+@pytest.mark.asyncio
+async def test_telegram_bot_handle_command_help():
     bot = TelegramBot("token")
-    reply = __import__("asyncio").run(bot.handle_update(TelegramUpdate(1, 2, text="/help")))
+    reply = await bot.handle_update(TelegramUpdate(1, 2, text="/help"))
     assert "Send a message" in reply
 
 
-def test_telegram_bot_handle_command_status():
+@pytest.mark.asyncio
+async def test_telegram_bot_handle_command_status():
     bot = TelegramBot("token")
-    reply = __import__("asyncio").run(bot.handle_update(TelegramUpdate(1, 2, text="/status")))
+    reply = await bot.handle_update(TelegramUpdate(1, 2, text="/status"))
     assert reply == "OK"
 
 
-def test_telegram_bot_handle_unknown_command():
+@pytest.mark.asyncio
+async def test_telegram_bot_handle_unknown_command():
     bot = TelegramBot("token")
-    reply = __import__("asyncio").run(bot.handle_update(TelegramUpdate(1, 2, text="/unknown")))
+    reply = await bot.handle_update(TelegramUpdate(1, 2, text="/unknown"))
     assert "Unknown command" in reply
 
 
-def test_telegram_bot_echo_message():
+@pytest.mark.asyncio
+async def test_telegram_bot_echo_message():
     bot = TelegramBot("token")
-    reply = __import__("asyncio").run(bot.handle_update(TelegramUpdate(1, 2, text="hello")))
+    reply = await bot.handle_update(TelegramUpdate(1, 2, text="hello"))
     assert reply == "Echo: hello"
 
 
-def test_telegram_bot_empty_message():
+@pytest.mark.asyncio
+async def test_telegram_bot_empty_message():
     bot = TelegramBot("token")
-    reply = __import__("asyncio").run(bot.handle_update(TelegramUpdate(1, 2, text="")))
+    reply = await bot.handle_update(TelegramUpdate(1, 2, text=""))
     assert reply == "Empty message"
 
 
-def test_telegram_bot_blocks_forbidden_chat():
+@pytest.mark.asyncio
+async def test_telegram_bot_blocks_forbidden_chat():
     bot = TelegramBot("token", allowed_chat_ids=["99"])
     with pytest.raises(TelegramBotError, match="Forbidden chat"):
-        __import__("asyncio").run(bot.handle_update(TelegramUpdate(1, 2, text="hi")))
+        await bot.handle_update(TelegramUpdate(1, 2, text="hi"))
+
+
+@pytest.mark.asyncio
+async def test_telegram_bot_summon_allowed_chat():
+    bot = TelegramBot("token", allowed_chat_ids=["1"])
+    reply = await bot.handle_update(TelegramUpdate(1, 1, text="/summon"))
+    assert reply == "Agent summoned."
+
+
+@pytest.mark.asyncio
+async def test_telegram_bot_register_commands_calls_api():
+    bot = TelegramBot("token")
+    with patch.object(bot, "_api", new_callable=AsyncMock) as mock_api:
+        await bot._register_commands()
+        mock_api.assert_awaited_once_with("setMyCommands", {"commands": bot._commands})

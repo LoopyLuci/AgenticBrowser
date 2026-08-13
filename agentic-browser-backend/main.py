@@ -112,6 +112,7 @@ class SettingsRequest(BaseModel):
     ollamaHost: Optional[str] = None
     openrouterKey: Optional[str] = None
     openaiKey: Optional[str] = None
+    telegramToken: Optional[str] = None
 
 
 class ToolRequest(BaseModel):
@@ -145,13 +146,16 @@ def update_settings(req: SettingsRequest):
     if req.openaiKey:
         settings.update(settings.ollama_host, settings.openrouter_key, req.openaiKey)
         set_setting("openaiKey", req.openaiKey)
+    if req.telegramToken:
+        settings.update(settings.ollama_host, settings.openrouter_key, settings.openai_key, req.telegramToken)
+        set_setting("telegramToken", req.telegramToken)
     audit("settings_update", {"provider_state": settings.to_dict()})
     return settings.to_dict()
 
 
 @app.get("/v1/settings")
 def read_settings():
-    return settings.to_dict()
+    return SettingsStore().to_dict()
 
 
 @app.get("/v1/tools")
