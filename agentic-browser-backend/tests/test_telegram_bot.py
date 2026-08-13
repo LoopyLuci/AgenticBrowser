@@ -10,7 +10,8 @@ from app.providers.telegram_bot import TelegramBot, TelegramUpdate, TelegramBotE
 async def test_telegram_bot_start_stop():
     bot = TelegramBot("token")
     assert not bot._running
-    await bot.start()
+    with patch.object(bot, "_run", new_callable=AsyncMock):
+        await bot.start()
     assert bot._running
     await bot.stop()
     assert not bot._running
