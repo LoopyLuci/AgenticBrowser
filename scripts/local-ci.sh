@@ -47,7 +47,13 @@ echo "-- Extension build + Playwright --"
 cd ../agentic-browser-extension
 npm run build 2>&1 | tee "$REPORT_DIR/extension-build.log"
 if [ ${PIPESTATUS[0]} -ne 0 ]; then fail_stage "extension-build"; fi
-npx playwright test tests/sidepanel-error-e2e.spec.ts --reporter=line --project=brave-extension 2>&1 | tee "$REPORT_DIR/extension-e2e.log" || echo "NOTE: Brave E2E test may fail due to browser automation limits; check $REPORT_DIR/extension-e2e.log"
+if [ "${AGENTIC_RUN_EXTENSION_E2E:-}" = "1" ]; then
+  npx playwright test tests/sidepanel-error-e2e.spec.ts --reporter=line --project=brave-extension 2>&1 | tee "$REPORT_DIR/extension-e2e.log"
+  if [ ${PIPESTATUS[0]} -ne 0 ]; then fail_stage "extension-e2e"; fi
+  pass_stage "extension-e2e"
+else
+  echo "Skipping extension E2E; set AGENTIC_RUN_EXTENSION_E2E=1 to enable"
+fi
 pass_stage "extension-build"
 
 echo "-- Windows packaging validation --"

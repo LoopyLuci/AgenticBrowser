@@ -33,3 +33,4 @@ Thumbs.db
 # Project artifacts
 release/
 dist/
+test-results/

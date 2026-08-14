@@ -50,4 +50,10 @@ describe("App feature flow", () => {
     await userEvent.type(input, "hello{Enter}");
     await waitFor(() => expect(screen.getByText(/Backend unreachable/i)).toBeDefined());
   });
+
+  it("shows empty-state prompt when chat is empty", async () => {
+    render(<App />);
+    expect(screen.getByText("What's next?")).toBeDefined();
+    expect(screen.getByText(/Connect a provider/i)).toBeDefined();
+  });
 });

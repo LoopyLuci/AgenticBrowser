@@ -100,6 +100,11 @@ Run the on-device pipeline from the repo root:
 
 Reports are written to `reports/ci.log` and `reports/results.jsonl`.
 
+### Extension E2E
+Extension Playwright is opt-in because Brave headless automation can be limited:
+- Bash: `AGENTIC_RUN_EXTENSION_E2E=1 bash scripts/local-ci.sh`
+- PowerShell: `$env:AGENTIC_RUN_EXTENSION_E2E="1"; pwsh scripts/local-ci.ps1`
+
 ## Tests
 - Backend: `cd agentic-browser-backend && .venv/Scripts/python -m pytest`
 - Control plane: `cd agentic-browser-control && npm run build && npm test`

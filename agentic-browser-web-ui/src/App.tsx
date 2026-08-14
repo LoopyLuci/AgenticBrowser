@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { MessageSquare, Send, Sparkles, Settings } from "lucide-react";
+import { MessageSquare, Send, Sparkles, Settings, Bot } from "lucide-react";
 
 type Role = "user" | "assistant";
 
@@ -93,26 +93,32 @@ export default function App() {
                 Backend unreachable. Check localhost:8123 and try again.
               </div>
             )}
-            {messages.length === 0 && (
+            {messages.length === 0 ? (
               <div className="h-[60vh] grid place-items-center text-center">
-                <div>
-                  <div className="text-4xl font-bold bg-gradient-to-r from-[#FF2FA7] via-[#A259FF] to-[#39FF14] bg-clip-text text-transparent">What&apos;s next?</div>
-                  <p className="mt-3 text-sm text-white/60">Connect a provider, choose a model, and start your agentic session.</p>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="h-16 w-16 rounded-2xl bg-white/8 border border-white/10 grid place-items-center">
+                    <Bot className="h-8 w-8 text-white/70" />
+                  </div>
+                  <div>
+                    <div className="text-4xl font-bold bg-gradient-to-r from-[#FF2FA7] via-[#A259FF] to-[#39FF14] bg-clip-text text-transparent">What&apos;s next?</div>
+                    <p className="mt-3 text-sm text-white/60">Connect a provider, choose a model, and start your agentic session.</p>
+                  </div>
                 </div>
               </div>
+            ) : (
+              messages.map((m) => (
+                <motion.div
+                  key={m.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                    m.role === "user" ? "ml-auto bg-gradient-to-br from-[#FF2FA7]/90 to-[#A259FF]/90" : "mr-auto bg-white/8 border border-white/10"
+                  }`}
+                >
+                  <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                </motion.div>
+              ))
             )}
-            {messages.map((m) => (
-              <motion.div
-                key={m.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                  m.role === "user" ? "ml-auto bg-gradient-to-br from-[#FF2FA7]/90 to-[#A259FF]/90" : "mr-auto bg-white/8 border border-white/10"
-                }`}
-              >
-                <div className="whitespace-pre-wrap break-words">{m.content}</div>
-              </motion.div>
-            ))}
             {isSending && (
               <div className="mr-auto max-w-[85%] rounded-2xl px-4 py-3 text-sm bg-white/8 border border-white/10">
                 <span className="inline-flex items-center gap-1">
