@@ -6,27 +6,30 @@ import App from "../src/App";
 
 describe("App", () => {
   beforeEach(() => {
-    global.fetch = vi.fn();
+    vi.resetAllMocks();
   });
 
-  it("shows empty state when messages are empty", () => {
+  it("renders empty state and switches to settings", async () => {
+    const user = userEvent.setup();
     render(<App />);
     expect(screen.getByText("What's next?")).toBeTruthy();
+    await user.click(screen.getByText("Settings"));
+    expect(screen.getByText("Providers")).toBeTruthy();
   });
 
-  it("loads settings into provider and timeout fields", async () => {
+  it("loads settings into UI fields", async () => {
     const user = userEvent.setup();
-    (global.fetch as any).mockResolvedValue({
+    global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         provider: "openrouter",
         chatModel: "openai/gpt-4o-mini",
-        ollamaTimeout: 60,
-        openrouterTimeout: 45,
-        openaiTimeout: 30,
         ollamaHost: "http://localhost:11434",
         openrouterKey: "sk-or",
         openaiKey: "sk-ai",
+        ollamaTimeout: 60,
+        openrouterTimeout: 45,
+        openaiTimeout: 30,
       }),
     });
 
@@ -38,9 +41,15 @@ describe("App", () => {
     expect(await screen.findByDisplayValue("60")).toBeTruthy();
   });
 
-  it("saves settings via POST and shows confirmation", async () => {
+  it("saves settings and shows confirmation", async () => {
     const user = userEvent.setup();
-    (global.fetch as any).mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+    let lastPayload: unknown;
+    global.fetch = vi.fn().mockImplementation(async (url, opts) => {
+      if (typeof opts === "object" && opts && "body" in opts) {
+        lastPayload = JSON.parse((opts.body as string) || "{}");
+      }
+      return { ok: true, json: async () => ({ ok: true }) } as Response;
+    });
 
     render(<App />);
     await user.click(screen.getByText("Settings"));
@@ -49,5 +58,31 @@ describe("App", () => {
     await user.type(inputs[0], "http://ollama.local");
     await user.click(screen.getByText("Save"));
     expect(await screen.findByText(/saved/i)).toBeTruthy();
+    expect((lastPayload as any).ollamaHost).toBe("http://ollama.local");
+  });
+
+  it("sends chat and shows assistant message", async () => {
+    const user = userEvent.setup();
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          provider: "ollama",
+          chatModel: "llama3",
+          ollamaTimeout: 120,
+          openrouterTimeout: 45,
+          openaiTimeout: 30,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: { content: "hello from assistant" }, provider: "ollama", model: "llama3" }),
+      });
+
+    render(<App />);
+    const input = screen.getByPlaceholderText("Ask anything…");
+    await user.type(input, "hi");
+    await user.click(screen.getByRole("button", { name: "" }));
+    expect(await screen.findByText("hello from assistant")).toBeTruthy();
   });
 });
