@@ -123,6 +123,7 @@ class SettingsRequest(BaseModel):
     ollamaTimeout: Optional[int] = None
     openrouterTimeout: Optional[int] = None
     openaiTimeout: Optional[int] = None
+    provider: Optional[str] = None
 
 
 class ToolRequest(BaseModel):
@@ -181,6 +182,8 @@ def update_settings(req: SettingsRequest):
         settings.set_timeout("openrouter", int(req.openrouterTimeout))
     if req.openaiTimeout is not None:
         settings.set_timeout("openai", int(req.openaiTimeout))
+    if req.provider in {"ollama", "openrouter", "openai"}:
+        settings.set("provider", req.provider)
     audit("settings_update", {"provider_state": settings.to_dict()})
     return settings.to_dict()
 

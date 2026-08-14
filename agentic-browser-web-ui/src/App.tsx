@@ -13,7 +13,7 @@ interface Message {
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [provider, setProvider] = useState("Ollama");
+  const [provider, setProvider] = useState("ollama");
   const [model, setModel] = useState("llama3");
   const [isSending, setIsSending] = useState(false);
   const [view, setView] = useState<"chat" | "settings">("chat");
@@ -21,6 +21,8 @@ export default function App() {
   const [openrouterKey, setOpenrouterKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [ollamaTimeout, setOllamaTimeout] = useState(120);
+  const [openrouterTimeout, setOpenrouterTimeout] = useState(45);
+  const [openaiTimeout, setOpenaiTimeout] = useState(30);
   const [saveMsg, setSaveMsg] = useState("");
   const [offline, setOffline] = useState(false);
 
@@ -32,8 +34,13 @@ export default function App() {
       if (typeof data.ollamaHost === "string") setOllamaHost(data.ollamaHost);
       if (typeof data.openrouterKey === "string") setOpenrouterKey(data.openrouterKey);
       if (typeof data.openaiKey === "string") setOpenaiKey(data.openaiKey);
-      const timeout = Number(data.ollamaTimeout);
-      if (Number.isFinite(timeout) && timeout > 0) setOllamaTimeout(timeout);
+      const oTimeout = Number(data.ollamaTimeout);
+      if (Number.isFinite(oTimeout) && oTimeout > 0) setOllamaTimeout(oTimeout);
+      const orTimeout = Number(data.openrouterTimeout);
+      if (Number.isFinite(orTimeout) && orTimeout > 0) setOpenrouterTimeout(orTimeout);
+      const oaiTimeout = Number(data.openaiTimeout);
+      if (Number.isFinite(oaiTimeout) && oaiTimeout > 0) setOpenaiTimeout(oaiTimeout);
+      if (["ollama", "openrouter", "openai"].includes(data.provider)) setProvider(data.provider);
     } catch {
       // keep defaults when backend is unreachable
     }
@@ -155,6 +162,16 @@ export default function App() {
           <div className="max-w-3xl mx-auto space-y-4">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
               <div className="text-sm font-semibold">Providers</div>
+              <label className="block text-xs text-white/70">Provider</label>
+              <select
+                value={provider}
+                onChange={(e) => setProvider(e.target.value)}
+                className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
+              >
+                <option value="ollama">Ollama</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="openai">OpenAI</option>
+              </select>
               <label className="block text-xs text-white/70">Ollama Host</label>
               <input
                 value={ollamaHost}
@@ -184,13 +201,25 @@ export default function App() {
                 onChange={(e) => setOllamaTimeout(Number(e.target.value) || 0)}
                 className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
               />
+              <label className="block text-xs text-white/70">OpenRouter timeout (seconds)</label>
+              <input
+                value={String(openrouterTimeout)}
+                onChange={(e) => setOpenrouterTimeout(Number(e.target.value) || 0)}
+                className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
+              />
+              <label className="block text-xs text-white/70">OpenAI timeout (seconds)</label>
+              <input
+                value={String(openaiTimeout)}
+                onChange={(e) => setOpenaiTimeout(Number(e.target.value) || 0)}
+                className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
+              />
               <div className="flex items-center gap-2">
                 <button
                   onClick={async () => {
                     await fetch("http://localhost:8123/v1/settings", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ ollamaHost, openrouterKey, openaiKey, ollamaTimeout }),
+                      body: JSON.stringify({ provider, ollamaHost, openrouterKey, openaiKey, ollamaTimeout, openrouterTimeout, openaiTimeout }),
                     });
                     setSaveMsg("Saved");
                     setTimeout(() => setSaveMsg(""), 1200);

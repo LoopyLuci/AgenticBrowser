@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+from datetime import datetime
 
 REPORT = Path("reports/results.jsonl")
 if not REPORT.exists():
@@ -31,6 +32,10 @@ print(f"Stages: {len(stages)} | Passed: {len(passed)} | Failed: {len(failed)}")
 for stage in stages:
     status = stage.get("status", "unknown")
     label = "PASS" if status == "passed" else "FAIL" if status == "failed" else status.upper()
-    print(f"  [{label}] {stage.get('stage')}")
+    ts = stage.get("timestamp", "")
+    print(f"  [{label}] {stage.get('stage')}  {ts}")
 if failed:
     raise SystemExit(1)
+
+print("")
+print("FINAL VERDICT: PASS")

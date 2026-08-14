@@ -53,6 +53,18 @@ def test_settings_timeout_persistence():
     assert body["openaiTimeout"] == 30
 
 
+def test_settings_provider_persistence():
+    r = client.post("/v1/settings", json={"provider": "openai", "ollamaTimeout": 15, "openrouterTimeout": 20, "openaiTimeout": 25})
+    assert r.status_code == 200
+    r = client.get("/v1/settings")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["provider"] == "openai"
+    assert body["ollamaTimeout"] == 15
+    assert body["openrouterTimeout"] == 20
+    assert body["openaiTimeout"] == 25
+
+
 def test_chat_uses_configured_timeout():
     r = client.post("/v1/settings", json={"ollamaTimeout": 1})
     assert r.status_code == 200
@@ -60,6 +72,18 @@ def test_chat_uses_configured_timeout():
     assert r.status_code == 200
     body = r.json()
     assert body["ollamaTimeout"] == 1
+
+
+def test_settings_provider_persistence():
+    r = client.post("/v1/settings", json={"provider": "openai", "ollamaTimeout": 15, "openrouterTimeout": 20, "openaiTimeout": 25})
+    assert r.status_code == 200
+    r = client.get("/v1/settings")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["provider"] == "openai"
+    assert body["ollamaTimeout"] == 15
+    assert body["openrouterTimeout"] == 20
+    assert body["openaiTimeout"] == 25
 
 
 def test_state_round_trip():

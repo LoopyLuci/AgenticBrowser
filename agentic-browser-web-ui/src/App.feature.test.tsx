@@ -45,14 +45,20 @@ describe("App feature", () => {
       openrouterKey: "sk-abc",
       openaiKey: "sk-def",
       ollamaTimeout: 90,
+      openrouterTimeout: 40,
+      openaiTimeout: 20,
+      provider: "openrouter",
     }));
     render(<App />);
     await userEvent.click(screen.getByText("Settings"));
     expect(await screen.findByDisplayValue("http://example")).toBeTruthy();
     expect(await screen.findByDisplayValue("90")).toBeTruthy();
+    expect(await screen.findByDisplayValue("40")).toBeTruthy();
+    expect(await screen.findByDisplayValue("20")).toBeTruthy();
+    expect(screen.getByRole("combobox").value).toBe("openrouter");
   });
 
-  it("saves timeout and shows saved message", async () => {
+  it("saves timeout and provider and shows saved message", async () => {
     let captured: any = null;
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input: any, init?: any) => {
       if (typeof input === "string" && input.includes("/v1/settings")) {
@@ -63,11 +69,14 @@ describe("App feature", () => {
     });
     render(<App />);
     await userEvent.click(screen.getByText("Settings"));
+    const providerSelect = await screen.findByRole("combobox");
+    await userEvent.selectOptions(providerSelect, "openai");
     const timeoutInput = await screen.findByDisplayValue("120");
     await userEvent.clear(timeoutInput);
     await userEvent.type(timeoutInput, "30");
     await userEvent.click(screen.getByText("Save"));
     expect(screen.getByText("Saved")).toBeTruthy();
+    expect(captured?.provider).toBe("openai");
     expect(captured?.ollamaTimeout).toBe(30);
   });
 });

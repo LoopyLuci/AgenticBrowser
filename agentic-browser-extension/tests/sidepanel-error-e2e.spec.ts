@@ -68,12 +68,6 @@ async function getExtensionId(page) {
 }
 
 test("sidepanel shows empty input guard and backend error state", async () => {
-  // Skip in headless Brave automation: the sidepanel React app does not render
-  // inside automated Brave profiles in this environment.
-  if (process.env.HEADLESS !== "false") {
-    test.skip(true, "Brave headless automation limit: sidepanel render not available");
-  }
-
   const serverInfo = await startFileServer(EXT_DIR);
   const context = await chromium.launchPersistentContext("", {
     executablePath: BRAVE,
@@ -89,14 +83,14 @@ test("sidepanel shows empty input guard and backend error state", async () => {
   const extensionId = await getExtensionId(page);
 
   await page.goto(`${serverInfo.baseUrl}/sidepanel.html`);
-  await new Promise((r) => setTimeout(r, 1000));
+  await page.waitForTimeout(1000);
 
   const input = page.locator("input[placeholder*='Ask anything']");
   await expect(input).toBeVisible();
 
   await input.fill("");
   await input.press("Enter");
-  await new Promise((r) => setTimeout(r, 300));
+  await page.waitForTimeout(300);
   const emptyState = page.locator("text=Ask anything…");
   await expect(emptyState).toBeVisible();
 
@@ -106,7 +100,7 @@ test("sidepanel shows empty input guard and backend error state", async () => {
 
   await input.fill("hello");
   await input.press("Enter");
-  await new Promise((r) => setTimeout(r, 500));
+  await page.waitForTimeout(500);
   const errorText = page.locator("text=Error:");
   await expect(errorText).toBeVisible();
 
