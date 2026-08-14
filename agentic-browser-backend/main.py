@@ -124,6 +124,7 @@ class SettingsRequest(BaseModel):
     openrouterTimeout: Optional[int] = None
     openaiTimeout: Optional[int] = None
     provider: Optional[str] = None
+    chatModel: Optional[str] = None
 
 
 class ToolRequest(BaseModel):
@@ -184,13 +185,15 @@ def update_settings(req: SettingsRequest):
         settings.set_timeout("openai", int(req.openaiTimeout))
     if req.provider in {"ollama", "openrouter", "openai"}:
         settings.set("provider", req.provider)
+    if req.chatModel:
+        settings.set("chatModel", req.chatModel)
     audit("settings_update", {"provider_state": settings.to_dict()})
     return settings.to_dict()
 
 
 @app.get("/v1/settings")
 def read_settings():
-    return SettingsStore().to_dict()
+    return settings.to_dict()
 
 
 @app.get("/v1/tools")

@@ -15,7 +15,6 @@ interface Message {
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [provider, setProvider] = useState("Ollama");
   const [model, setModel] = useState("llama3");
   const [isSending, setIsSending] = useState(false);
   const [mode, setMode] = useState<Mode>("chat");
@@ -29,15 +28,39 @@ export default function App() {
   const [backendHost, setBackendHost] = useState("http://localhost:8123");
   const [saveMsg, setSaveMsg] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [ollamaTimeout, setOllamaTimeout] = useState(120);
+  const [openrouterTimeout, setOpenrouterTimeout] = useState(45);
+  const [openaiTimeout, setOpenaiTimeout] = useState(30);
+  const [provider, setProvider] = useState("ollama");
+  const [chatModel, setChatModel] = useState("llama3");
 
   const streamAbortRef = React.useRef<(() => void) | null>(null);
 
   const loadSettings = async () => {
     try {
-      const result = await chrome.storage.local.get(["ollamaHost", "openrouterKey", "openaiKey"]);
+      const result = await chrome.storage.local.get([
+        "ollamaHost",
+        "openrouterKey",
+        "openaiKey",
+        "backendHost",
+        "ollamaTimeout",
+        "openrouterTimeout",
+        "openaiTimeout",
+        "provider",
+        "chatModel",
+      ]);
       if (result.ollamaHost) setOllamaHost(result.ollamaHost);
       if (result.openrouterKey) setOpenrouterKey(result.openrouterKey);
       if (result.openaiKey) setOpenaiKey(result.openaiKey);
+      if (result.backendHost) setBackendHost(result.backendHost);
+      const oTimeout = Number(result.ollamaTimeout);
+      if (Number.isFinite(oTimeout) && oTimeout > 0) setOllamaTimeout(oTimeout);
+      const orTimeout = Number(result.openrouterTimeout);
+      if (Number.isFinite(orTimeout) && orTimeout > 0) setOpenrouterTimeout(orTimeout);
+      const oaiTimeout = Number(result.openaiTimeout);
+      if (Number.isFinite(oaiTimeout) && oaiTimeout > 0) setOpenaiTimeout(oaiTimeout);
+      if (["ollama", "openrouter", "openai"].includes(result.provider)) setProvider(result.provider);
+      if (typeof result.chatModel === "string" && result.chatModel.trim()) setChatModel(result.chatModel.trim());
     } catch (err) {
       console.error("Failed to load settings", err);
     }
@@ -45,7 +68,17 @@ export default function App() {
 
   const saveSettings = async () => {
     try {
-      await chrome.storage.local.set({ ollamaHost, openrouterKey, openaiKey });
+      await chrome.storage.local.set({
+        ollamaHost,
+        openrouterKey,
+        openaiKey,
+        backendHost,
+        ollamaTimeout,
+        openrouterTimeout,
+        openaiTimeout,
+        provider,
+        chatModel,
+      });
       setSaveMsg("Saved");
       setTimeout(() => setSaveMsg(""), 1200);
     } catch (err) {
@@ -99,7 +132,7 @@ export default function App() {
         payload: {
           messages: outboundMessages,
           provider,
-          model,
+          model: chatModel,
           sessionId: `sidepanel-${Date.now()}`,
         },
       });
@@ -205,7 +238,7 @@ export default function App() {
           </div>
           <div>
             <div className="text-sm font-semibold tracking-wide">AgenticBrowser</div>
-            <div className="text-[11px] text-white/60">{provider} · {model}</div>
+            <div className="text-[11px] text-white/60">{provider} · {chatModel}</div>
           </div>
         </div>
         <div className="flex gap-1">
@@ -288,19 +321,23 @@ export default function App() {
             <div className="flex gap-2">
               <select
                 value={provider}
-                onChange={(e) => setProvider(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setProvider(next);
+                  if (next === "ollama") setChatModel("llama3");
+                  else if (next === "openrouter") setChatModel("openai/gpt-4o-mini");
+                  else if (next === "openai") setChatModel("gpt-4o-mini");
+                  else setChatModel("llama3");
+                }}
                 className="h-10 rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
               >
-                <option>Ollama</option>
-                <option>OpenRouter</option>
-                <option>OpenCode</option>
-                <option>OpenAI</option>
-                <option>Gemini</option>
-                <option>Claude</option>
+                <option value="ollama">Ollama</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="openai">OpenAI</option>
               </select>
               <input
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
+                value={chatModel}
+                onChange={(e) => setChatModel(e.target.value)}
                 className="h-10 flex-1 rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
                 placeholder="Model"
               />
@@ -327,6 +364,37 @@ export default function App() {
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
             <div className="text-sm font-semibold">Providers</div>
+            <label className="block text-xs text-white/70">Backend URL</label>
+            <input
+              value={backendHost}
+              onChange={(e) => setBackendHost(e.target.value)}
+              className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
+              placeholder="http://localhost:8123"
+            />
+            <label className="block text-xs text-white/70">Provider</label>
+            <select
+              value={provider}
+              onChange={(e) => {
+                const next = e.target.value;
+                setProvider(next);
+                if (next === "ollama") setChatModel("llama3");
+                else if (next === "openrouter") setChatModel("openai/gpt-4o-mini");
+                else if (next === "openai") setChatModel("gpt-4o-mini");
+                else setChatModel("llama3");
+              }}
+              className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
+            >
+              <option value="ollama">Ollama</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="openai">OpenAI</option>
+            </select>
+            <label className="block text-xs text-white/70">Model</label>
+            <input
+              value={chatModel}
+              onChange={(e) => setChatModel(e.target.value)}
+              className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
+              placeholder="llama3"
+            />
             <label className="block text-xs text-white/70">Ollama Host</label>
             <input
               value={ollamaHost}
@@ -350,8 +418,28 @@ export default function App() {
               placeholder="sk-..."
               type="password"
             />
+            <label className="block text-xs text-white/70">Ollama timeout (seconds)</label>
+            <input
+              value={String(ollamaTimeout)}
+              onChange={(e) => setOllamaTimeout(Number(e.target.value) || 0)}
+              className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
+            />
+            <label className="block text-xs text-white/70">OpenRouter timeout (seconds)</label>
+            <input
+              value={String(openrouterTimeout)}
+              onChange={(e) => setOpenrouterTimeout(Number(e.target.value) || 0)}
+              className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
+            />
+            <label className="block text-xs text-white/70">OpenAI timeout (seconds)</label>
+            <input
+              value={String(openaiTimeout)}
+              onChange={(e) => setOpenaiTimeout(Number(e.target.value) || 0)}
+              className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
+            />
             <div className="flex items-center gap-2">
-              <button onClick={saveSettings} className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#FF2FA7] to-[#A259FF] text-xs font-semibold">Save</button>
+              <button onClick={saveSettings} className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#FF2FA7] to-[#A259FF] text-xs font-semibold">
+                Save
+              </button>
               <span className="text-[11px] text-white/70">{saveMsg}</span>
             </div>
           </div>

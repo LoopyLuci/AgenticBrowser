@@ -17,6 +17,8 @@ export default defineConfig({
   projects: [
     {
       name: "brave-extension",
+      testMatch: "**/*.spec.ts",
+      tsconfig: "tsconfig.e2e.json",
       use: {
         ...devices["Desktop Chrome"],
         channel: undefined,

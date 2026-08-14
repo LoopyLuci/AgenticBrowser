@@ -10,11 +10,15 @@ interface Message {
   content: string;
 }
 
+const OLLAMA_MODELS = ["llama3", "mistral", "qwen2.5:0.5b"];
+const OPENROUTER_MODELS = ["openai/gpt-4o-mini", "anthropic/claude-3-haiku", "google/gemini-flash"];
+const OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o", "o3-mini"];
+
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [provider, setProvider] = useState("ollama");
-  const [model, setModel] = useState("llama3");
+  const [chatModel, setChatModel] = useState("llama3");
   const [isSending, setIsSending] = useState(false);
   const [view, setView] = useState<"chat" | "settings">("chat");
   const [ollamaHost, setOllamaHost] = useState("http://localhost:11434");
@@ -25,6 +29,15 @@ export default function App() {
   const [openaiTimeout, setOpenaiTimeout] = useState(30);
   const [saveMsg, setSaveMsg] = useState("");
   const [offline, setOffline] = useState(false);
+
+  const models =
+    provider === "ollama"
+      ? OLLAMA_MODELS
+      : provider === "openrouter"
+        ? OPENROUTER_MODELS
+        : provider === "openai"
+          ? OPENAI_MODELS
+          : ["llama3"];
 
   const loadSettings = async () => {
     try {
@@ -41,6 +54,7 @@ export default function App() {
       const oaiTimeout = Number(data.openaiTimeout);
       if (Number.isFinite(oaiTimeout) && oaiTimeout > 0) setOpenaiTimeout(oaiTimeout);
       if (["ollama", "openrouter", "openai"].includes(data.provider)) setProvider(data.provider);
+      if (typeof data.chatModel === "string" && data.chatModel.trim()) setChatModel(data.chatModel.trim());
     } catch {
       // keep defaults when backend is unreachable
     }
@@ -65,7 +79,7 @@ export default function App() {
         body: JSON.stringify({
           messages: [...messages, userMsg].map(({ role, content }) => ({ role, content })),
           provider,
-          model,
+          model: chatModel,
         }),
       });
       if (!res.ok) {
@@ -165,12 +179,31 @@ export default function App() {
               <label className="block text-xs text-white/70">Provider</label>
               <select
                 value={provider}
-                onChange={(e) => setProvider(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setProvider(next);
+                  if (next === "ollama") setChatModel("llama3");
+                  else if (next === "openrouter") setChatModel("openai/gpt-4o-mini");
+                  else if (next === "openai") setChatModel("gpt-4o-mini");
+                  else setChatModel("llama3");
+                }}
                 className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
               >
                 <option value="ollama">Ollama</option>
                 <option value="openrouter">OpenRouter</option>
                 <option value="openai">OpenAI</option>
+              </select>
+              <label className="block text-xs text-white/70">Model</label>
+              <select
+                value={chatModel}
+                onChange={(e) => setChatModel(e.target.value)}
+                className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
+              >
+                {models.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
               </select>
               <label className="block text-xs text-white/70">Ollama Host</label>
               <input
@@ -219,7 +252,7 @@ export default function App() {
                     await fetch("http://localhost:8123/v1/settings", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ provider, ollamaHost, openrouterKey, openaiKey, ollamaTimeout, openrouterTimeout, openaiTimeout }),
+                      body: JSON.stringify({ provider, chatModel, ollamaHost, openrouterKey, openaiKey, ollamaTimeout, openrouterTimeout, openaiTimeout }),
                     });
                     setSaveMsg("Saved");
                     setTimeout(() => setSaveMsg(""), 1200);

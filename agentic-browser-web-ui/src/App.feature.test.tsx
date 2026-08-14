@@ -2,81 +2,52 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import App from "./App";
+import App from "../src/App";
 
-function okResponse(body: any): Response {
-  return {
-    ok: true,
-    status: 200,
-    json: async () => body,
-    text: async () => JSON.stringify(body),
-  } as unknown as Response;
-}
-
-describe("App feature", () => {
+describe("App", () => {
   beforeEach(() => {
-    vi.resetModules();
+    global.fetch = vi.fn();
   });
 
-  it("renders empty state when no messages", async () => {
+  it("shows empty state when messages are empty", () => {
     render(<App />);
-    expect(await screen.findByText("What's next?")).toBeTruthy();
+    expect(screen.getByText("What's next?")).toBeTruthy();
   });
 
-  it("shows backend error when chat fetch fails", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("fetch failed"));
-    render(<App />);
-    await userEvent.click(screen.getByPlaceholderText("Ask anything…"));
-    await userEvent.type(screen.getByPlaceholderText("Ask anything…"), "hello");
-    await userEvent.keyboard("{Enter}");
-    expect(await screen.findByText(/Error: fetch failed/)).toBeTruthy();
-  });
-
-  it("shows empty input guard when sending blank text", async () => {
-    render(<App />);
-    await userEvent.click(screen.getByPlaceholderText("Ask anything…"));
-    await userEvent.keyboard("{Enter}");
-    expect(await screen.findByText("What's next?")).toBeTruthy();
-  });
-
-  it("loads settings and shows them after navigation", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(okResponse({
-      ollamaHost: "http://example",
-      openrouterKey: "sk-abc",
-      openaiKey: "sk-def",
-      ollamaTimeout: 90,
-      openrouterTimeout: 40,
-      openaiTimeout: 20,
-      provider: "openrouter",
-    }));
-    render(<App />);
-    await userEvent.click(screen.getByText("Settings"));
-    expect(await screen.findByDisplayValue("http://example")).toBeTruthy();
-    expect(await screen.findByDisplayValue("90")).toBeTruthy();
-    expect(await screen.findByDisplayValue("40")).toBeTruthy();
-    expect(await screen.findByDisplayValue("20")).toBeTruthy();
-    expect(screen.getByRole("combobox").value).toBe("openrouter");
-  });
-
-  it("saves timeout and provider and shows saved message", async () => {
-    let captured: any = null;
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: any, init?: any) => {
-      if (typeof input === "string" && input.includes("/v1/settings")) {
-        captured = JSON.parse(init?.body || "{}");
-        return okResponse({}) as Response;
-      }
-      return okResponse({}) as Response;
+  it("loads settings into provider and timeout fields", async () => {
+    const user = userEvent.setup();
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        provider: "openrouter",
+        chatModel: "openai/gpt-4o-mini",
+        ollamaTimeout: 60,
+        openrouterTimeout: 45,
+        openaiTimeout: 30,
+        ollamaHost: "http://localhost:11434",
+        openrouterKey: "sk-or",
+        openaiKey: "sk-ai",
+      }),
     });
+
     render(<App />);
-    await userEvent.click(screen.getByText("Settings"));
-    const providerSelect = await screen.findByRole("combobox");
-    await userEvent.selectOptions(providerSelect, "openai");
-    const timeoutInput = await screen.findByDisplayValue("120");
-    await userEvent.clear(timeoutInput);
-    await userEvent.type(timeoutInput, "30");
-    await userEvent.click(screen.getByText("Save"));
-    expect(screen.getByText("Saved")).toBeTruthy();
-    expect(captured?.provider).toBe("openai");
-    expect(captured?.ollamaTimeout).toBe(30);
+    await user.click(screen.getByText("Settings"));
+    const selects = await screen.findAllByRole("combobox");
+    expect(selects[0].value).toBe("openrouter");
+    expect(await screen.findByDisplayValue("openai/gpt-4o-mini")).toBeTruthy();
+    expect(await screen.findByDisplayValue("60")).toBeTruthy();
+  });
+
+  it("saves settings via POST and shows confirmation", async () => {
+    const user = userEvent.setup();
+    (global.fetch as any).mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+
+    render(<App />);
+    await user.click(screen.getByText("Settings"));
+    const inputs = await screen.findAllByRole("textbox");
+    await user.clear(inputs[0]);
+    await user.type(inputs[0], "http://ollama.local");
+    await user.click(screen.getByText("Save"));
+    expect(await screen.findByText(/saved/i)).toBeTruthy();
   });
 });

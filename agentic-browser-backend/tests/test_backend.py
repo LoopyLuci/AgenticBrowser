@@ -74,18 +74,6 @@ def test_chat_uses_configured_timeout():
     assert body["ollamaTimeout"] == 1
 
 
-def test_settings_provider_persistence():
-    r = client.post("/v1/settings", json={"provider": "openai", "ollamaTimeout": 15, "openrouterTimeout": 20, "openaiTimeout": 25})
-    assert r.status_code == 200
-    r = client.get("/v1/settings")
-    assert r.status_code == 200
-    body = r.json()
-    assert body["provider"] == "openai"
-    assert body["ollamaTimeout"] == 15
-    assert body["openrouterTimeout"] == 20
-    assert body["openaiTimeout"] == 25
-
-
 def test_state_round_trip():
     sid = "test-session"
     tmp_db = f".agentic-state-test-{os.getpid()}.db"
@@ -143,3 +131,33 @@ def test_audit_log_emits_during_chat():
         "stream": False,
     })
     assert r.status_code == 200
+
+
+def test_chat_round_trip_with_settings():
+    r = client.post("/v1/settings", json={"provider": "ollama", "ollamaHost": "http://localhost:11434", "ollamaTimeout": 2, "chatModel": "llama3"})
+    assert r.status_code == 200
+    r = client.get("/v1/settings")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["provider"] == "ollama"
+    assert body["chatModel"] == "llama3"
+    assert body["ollamaTimeout"] == 2
+
+
+def test_settings_sync_payload_matches_ui():
+    payload = {
+        "ollamaHost": "http://localhost:11434",
+        "openrouterKey": "sk-or",
+        "openaiKey": "sk-ai",
+        "telegramToken": "tg",
+        "ollamaTimeout": 90,
+        "openrouterTimeout": 40,
+        "openaiTimeout": 20,
+        "provider": "openrouter",
+        "chatModel": "anthropic/claude-3-haiku",
+    }
+    r = client.post("/v1/settings", json=payload)
+    assert r.status_code == 200
+    body = r.json()
+    for key, expected in payload.items():
+        assert body.get(key) == expected, f"settings key {key} mismatch"
