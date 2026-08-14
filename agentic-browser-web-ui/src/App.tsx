@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { MessageSquare, Send, Sparkles, Settings, Bot } from "lucide-react";
 
@@ -20,8 +20,28 @@ export default function App() {
   const [ollamaHost, setOllamaHost] = useState("http://localhost:11434");
   const [openrouterKey, setOpenrouterKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
+  const [ollamaTimeout, setOllamaTimeout] = useState(120);
   const [saveMsg, setSaveMsg] = useState("");
   const [offline, setOffline] = useState(false);
+
+  const loadSettings = async () => {
+    try {
+      const res = await fetch("http://localhost:8123/v1/settings");
+      if (!res.ok) throw new Error("settings_fetch_failed");
+      const data = await res.json();
+      if (typeof data.ollamaHost === "string") setOllamaHost(data.ollamaHost);
+      if (typeof data.openrouterKey === "string") setOpenrouterKey(data.openrouterKey);
+      if (typeof data.openaiKey === "string") setOpenaiKey(data.openaiKey);
+      const timeout = Number(data.ollamaTimeout);
+      if (Number.isFinite(timeout) && timeout > 0) setOllamaTimeout(timeout);
+    } catch {
+      // keep defaults when backend is unreachable
+    }
+  };
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
   const onSend = async () => {
     const text = input.trim();
@@ -160,9 +180,9 @@ export default function App() {
               />
               <label className="block text-xs text-white/70">Ollama timeout (seconds)</label>
               <input
-                value={String(120)}
-                readOnly
-                className="h-10 w-full rounded-xl bg-white/5 border border-white/10 px-3 text-xs text-white/60"
+                value={String(ollamaTimeout)}
+                onChange={(e) => setOllamaTimeout(Number(e.target.value) || 0)}
+                className="h-10 w-full rounded-xl bg-white/8 border border-white/10 px-3 text-xs outline-none focus:border-[#A259FF]"
               />
               <div className="flex items-center gap-2">
                 <button
@@ -170,7 +190,7 @@ export default function App() {
                     await fetch("http://localhost:8123/v1/settings", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ ollamaHost, openrouterKey, openaiKey }),
+                      body: JSON.stringify({ ollamaHost, openrouterKey, openaiKey, ollamaTimeout }),
                     });
                     setSaveMsg("Saved");
                     setTimeout(() => setSaveMsg(""), 1200);

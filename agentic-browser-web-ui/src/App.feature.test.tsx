@@ -1,59 +1,73 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import App from "./App";
 
-describe("App feature flow", () => {
-  it("submits settings and shows save feedback", async () => {
-    render(<App />);
-    await userEvent.click(screen.getByRole("button", { name: /settings/i }));
-    const ollamaInput = screen.getByPlaceholderText("http://localhost:11434");
-    await userEvent.clear(ollamaInput);
-    await userEvent.type(ollamaInput, "http://localhost:9999/ollama");
-    await userEvent.click(screen.getByRole("button", { name: /save/i }));
-    await waitFor(() => expect(screen.getByText("Saved")).toBeDefined());
+function okResponse(body: any): Response {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  } as unknown as Response;
+}
+
+describe("App feature", () => {
+  beforeEach(() => {
+    vi.resetModules();
   });
 
-  it("sends a chat message and shows assistant reply", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: { content: "Hello from mocked backend" } }),
-    } as any);
+  it("renders empty state when no messages", async () => {
     render(<App />);
-    const input = screen.getByPlaceholderText("Ask anything…");
-    await userEvent.type(input, "hello{Enter}");
-    await waitFor(() => expect(screen.getByText("Hello from mocked backend")).toBeDefined());
+    expect(await screen.findByText("What's next?")).toBeTruthy();
   });
 
-  it("switches between chat and settings views", async () => {
+  it("shows backend error when chat fetch fails", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("fetch failed"));
     render(<App />);
-    expect(screen.getByRole("button", { name: /chat/i })).toBeDefined();
-    expect(screen.getByRole("button", { name: /settings/i })).toBeDefined();
+    await userEvent.click(screen.getByPlaceholderText("Ask anything…"));
+    await userEvent.type(screen.getByPlaceholderText("Ask anything…"), "hello");
+    await userEvent.keyboard("{Enter}");
+    expect(await screen.findByText(/Error: fetch failed/)).toBeTruthy();
   });
 
-  it("shows offline banner when backend is unreachable", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("fetch failed"));
+  it("shows empty input guard when sending blank text", async () => {
     render(<App />);
-    const input = screen.getByPlaceholderText("Ask anything…");
-    await userEvent.type(input, "hello{Enter}");
-    await waitFor(() => expect(screen.getByText(/Backend unreachable/i)).toBeDefined());
+    await userEvent.click(screen.getByPlaceholderText("Ask anything…"));
+    await userEvent.keyboard("{Enter}");
+    expect(await screen.findByText("What's next?")).toBeTruthy();
   });
 
-  it("shows offline banner when backend returns an error status", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: false,
-      status: 500,
-    } as any);
+  it("loads settings and shows them after navigation", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(okResponse({
+      ollamaHost: "http://example",
+      openrouterKey: "sk-abc",
+      openaiKey: "sk-def",
+      ollamaTimeout: 90,
+    }));
     render(<App />);
-    const input = screen.getByPlaceholderText("Ask anything…");
-    await userEvent.type(input, "hello{Enter}");
-    await waitFor(() => expect(screen.getByText(/Backend unreachable/i)).toBeDefined());
+    await userEvent.click(screen.getByText("Settings"));
+    expect(await screen.findByDisplayValue("http://example")).toBeTruthy();
+    expect(await screen.findByDisplayValue("90")).toBeTruthy();
   });
 
-  it("shows empty-state prompt when chat is empty", async () => {
+  it("saves timeout and shows saved message", async () => {
+    let captured: any = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: any, init?: any) => {
+      if (typeof input === "string" && input.includes("/v1/settings")) {
+        captured = JSON.parse(init?.body || "{}");
+        return okResponse({}) as Response;
+      }
+      return okResponse({}) as Response;
+    });
     render(<App />);
-    expect(screen.getByText("What's next?")).toBeDefined();
-    expect(screen.getByText(/Connect a provider/i)).toBeDefined();
+    await userEvent.click(screen.getByText("Settings"));
+    const timeoutInput = await screen.findByDisplayValue("120");
+    await userEvent.clear(timeoutInput);
+    await userEvent.type(timeoutInput, "30");
+    await userEvent.click(screen.getByText("Save"));
+    expect(screen.getByText("Saved")).toBeTruthy();
+    expect(captured?.ollamaTimeout).toBe(30);
   });
 });

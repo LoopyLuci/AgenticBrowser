@@ -72,6 +72,10 @@ npm run build 2>&1 | tee "$REPORT_DIR/web-build.log"
 if [ ${PIPESTATUS[0]} -ne 0 ]; then fail_stage "web-build"; fi
 pass_stage "web-ui"
 
+echo "-- CI summary --"
+cd "$(dirname "$0")/.."
+python scripts/ci-summary.py
+
 echo "-- Root monorepo build --"
 cd ..
 npm run build 2>&1 | tee "$REPORT_DIR/root-build.log"
