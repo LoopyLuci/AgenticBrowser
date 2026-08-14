@@ -8,6 +8,8 @@ import json
 import os
 import re
 
+import httpx
+
 from app.providers.chat import PROVIDERS
 from app.tools.registry import list_tools, get, ToolContext, autoload
 from app.plugins.providers import autoload as autoload_providers
@@ -118,6 +120,9 @@ class SettingsRequest(BaseModel):
     telegramToken: Optional[str] = None
     telegram_allowed_chat_ids: Optional[list[str]] = None
     telegram_webhook_url: Optional[str] = None
+    ollamaTimeout: Optional[int] = None
+    openrouterTimeout: Optional[int] = None
+    openaiTimeout: Optional[int] = None
 
 
 class ToolRequest(BaseModel):
@@ -170,6 +175,12 @@ def update_settings(req: SettingsRequest):
         settings.set("telegram_allowed_chat_ids", req.telegram_allowed_chat_ids)
     if req.telegram_webhook_url:
         settings.set("telegram_webhook_url", req.telegram_webhook_url)
+    if req.ollamaTimeout is not None:
+        settings.set_timeout("ollama", int(req.ollamaTimeout))
+    if req.openrouterTimeout is not None:
+        settings.set_timeout("openrouter", int(req.openrouterTimeout))
+    if req.openaiTimeout is not None:
+        settings.set_timeout("openai", int(req.openaiTimeout))
     audit("settings_update", {"provider_state": settings.to_dict()})
     return settings.to_dict()
 
@@ -217,11 +228,11 @@ async def chat(req: ChatRequest):
         append_message(req.session_id, msg["role"], msg["content"])
 
     if req.provider == "ollama":
-        provider = provider_cls(settings.ollamaHost)
+        provider = provider_cls(settings.ollamaHost, timeout=httpx.Timeout(connect=5.0, read=float(settings.get_timeout("ollama")), write=120.0, pool=5.0))
     elif req.provider == "openrouter":
-        provider = provider_cls(settings.openrouterKey)
+        provider = provider_cls(settings.openrouterKey, timeout=httpx.Timeout(connect=5.0, read=float(settings.get_timeout("openrouter")), write=120.0, pool=5.0))
     elif req.provider == "openai":
-        provider = provider_cls(settings.openaiKey)
+        provider = provider_cls(settings.openaiKey, timeout=httpx.Timeout(connect=5.0, read=float(settings.get_timeout("openai")), write=120.0, pool=5.0))
     elif req.provider == "telegram":
         provider = provider_cls(settings.telegramToken, settings.telegram_allowed_chat_ids)
     else:
@@ -253,11 +264,11 @@ async def _sse_chat(req: ChatRequest):
         append_message(req.session_id, msg["role"], msg["content"])
 
     if req.provider == "ollama":
-        provider = provider_cls(settings.ollamaHost)
+        provider = provider_cls(settings.ollamaHost, timeout=httpx.Timeout(connect=5.0, read=float(settings.get_timeout("ollama")), write=120.0, pool=5.0))
     elif req.provider == "openrouter":
-        provider = provider_cls(settings.openrouterKey)
+        provider = provider_cls(settings.openrouterKey, timeout=httpx.Timeout(connect=5.0, read=float(settings.get_timeout("openrouter")), write=120.0, pool=5.0))
     elif req.provider == "openai":
-        provider = provider_cls(settings.openaiKey)
+        provider = provider_cls(settings.openaiKey, timeout=httpx.Timeout(connect=5.0, read=float(settings.get_timeout("openai")), write=120.0, pool=5.0))
     elif req.provider == "telegram":
         provider = provider_cls(settings.telegramToken, settings.telegram_allowed_chat_ids)
     else:

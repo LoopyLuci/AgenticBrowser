@@ -57,7 +57,7 @@ class FakeTimeoutClient:
 async def test_openai_surfaces_http_error():
     provider = OpenAIProvider(api_key="test-key")
     with patch("app.providers.chat.httpx.AsyncClient", new=FakeOpenAIClient):
-        with pytest.raises(httpx.RemoteProtocolError):
+        with pytest.raises(RuntimeError, match="openai network error"):
             await provider.chat("gpt-4", [{"role": "user", "content": "hi"}])
 
 
@@ -65,7 +65,7 @@ async def test_openai_surfaces_http_error():
 async def test_openrouter_surfaces_http_error():
     provider = OpenRouterProvider(api_key="test-key")
     with patch("app.providers.chat.httpx.AsyncClient", new=FakeOpenRouterClient):
-        with pytest.raises(httpx.RemoteProtocolError):
+        with pytest.raises(RuntimeError, match="openrouter network error"):
             await provider.chat("openrouter/model", [{"role": "user", "content": "hi"}])
 
 
@@ -73,7 +73,7 @@ async def test_openrouter_surfaces_http_error():
 async def test_ollama_surfaces_http_error():
     provider = OllamaProvider(base="http://localhost:11434")
     with patch("app.providers.chat.httpx.AsyncClient", new=FakeOllamaClient):
-        with pytest.raises(httpx.RemoteProtocolError):
+        with pytest.raises(RuntimeError, match="ollama network error"):
             await provider.chat("llama3", [{"role": "user", "content": "hi"}])
 
 
@@ -81,7 +81,7 @@ async def test_ollama_surfaces_http_error():
 async def test_openai_surfaces_timeout():
     provider = OpenAIProvider(api_key="test-key")
     with patch("app.providers.chat.httpx.AsyncClient", new=FakeTimeoutClient):
-        with pytest.raises(httpx.TimeoutException):
+        with pytest.raises(RuntimeError, match="provider request timed out"):
             await provider.chat("gpt-4", [{"role": "user", "content": "hi"}])
 
 
@@ -89,7 +89,7 @@ async def test_openai_surfaces_timeout():
 async def test_openrouter_surfaces_timeout():
     provider = OpenRouterProvider(api_key="test-key")
     with patch("app.providers.chat.httpx.AsyncClient", new=FakeTimeoutClient):
-        with pytest.raises(httpx.TimeoutException):
+        with pytest.raises(RuntimeError, match="provider request timed out"):
             await provider.chat("openrouter/model", [{"role": "user", "content": "hi"}])
 
 
@@ -97,7 +97,7 @@ async def test_openrouter_surfaces_timeout():
 async def test_ollama_surfaces_timeout():
     provider = OllamaProvider(base="http://localhost:11434")
     with patch("app.providers.chat.httpx.AsyncClient", new=FakeTimeoutClient):
-        with pytest.raises(httpx.TimeoutException):
+        with pytest.raises(RuntimeError, match="provider request timed out"):
             await provider.chat("llama3", [{"role": "user", "content": "hi"}])
 
 

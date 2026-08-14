@@ -136,3 +136,11 @@ Extension backend URL config:
 - Save `Ollama Host` and, if needed, provider keys.
 - The sidepanel sends chat requests through the background script to the backend configured there.
 - mTLS/SSL is supported via the backend HTTPS port once SSL is enabled in your backend launch command.
+
+### Manual extension smoke test
+Use this checklist when running Brave/Chrome locally:
+1. Load `agentic-browser-extension/dist` as an unpacked extension.
+2. Open the sidepanel.
+3. Confirm the empty-state prompt is visible when no messages exist.
+4. Leave the input blank and press Enter; confirm the empty-input guard appears.
+5. Send `hello`; confirm the assistant reply appears or an `Error:` detail is shown when the backend is unreachable.

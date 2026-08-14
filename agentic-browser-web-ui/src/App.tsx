@@ -158,6 +158,12 @@ export default function App() {
                 placeholder="sk-..."
                 type="password"
               />
+              <label className="block text-xs text-white/70">Ollama timeout (seconds)</label>
+              <input
+                value={String(120)}
+                readOnly
+                className="h-10 w-full rounded-xl bg-white/5 border border-white/10 px-3 text-xs text-white/60"
+              />
               <div className="flex items-center gap-2">
                 <button
                   onClick={async () => {

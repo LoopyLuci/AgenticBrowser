@@ -21,6 +21,14 @@ def _ensure_db(db_path: str) -> sqlite3.Connection:
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS timeout_settings (
+            key TEXT PRIMARY KEY,
+            seconds INTEGER NOT NULL
+        )
+        """
+    )
     conn.commit()
     return conn
 
@@ -64,4 +72,21 @@ class SettingsStore:
                 out[key] = json.loads(value)
             except Exception:
                 out[key] = value
+        timeout_rows = self._conn.execute("SELECT key, seconds FROM timeout_settings").fetchall()
+        for key, seconds in timeout_rows:
+            out[f"{key}Timeout"] = int(seconds)
         return out
+
+    def get_timeout(self, key: str, default: int = 120) -> int:
+        row = self._conn.execute("SELECT seconds FROM timeout_settings WHERE key = ?", (key,)).fetchone()
+        if not row:
+            return default
+        return int(row[0])
+
+    def set_timeout(self, key: str, seconds: int) -> None:
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO timeout_settings(key, seconds) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET seconds = excluded.seconds",
+                (key, int(seconds)),
+            )
+            self._conn.commit()

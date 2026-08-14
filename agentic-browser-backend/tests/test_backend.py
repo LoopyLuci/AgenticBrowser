@@ -1,20 +1,11 @@
 import os
 import pytest
-from fastapi.testclient import TestClient
-from app.tools.registry import list_tools, get
-from app.providers.chat import PROVIDERS, OllamaProvider
-from app.settings.store import SettingsStore
-from app.state.store import (
-    init_state_db,
-    get_or_create_session,
-    append_message,
-    get_messages,
-    set_setting,
-    get_setting,
-    export_settings,
-    import_settings,
-)
+from unittest.mock import patch
 
+import httpx
+from fastapi.testclient import TestClient
+
+from app.providers.chat import OpenAIProvider, OpenRouterProvider, OllamaProvider
 from main import app
 
 client = TestClient(app)
@@ -49,6 +40,26 @@ def test_settings_store_defaults_and_update():
     assert body["ollamaHost"] == "http://localhost:11434"
     assert body["openrouterKey"] == "demo"
     assert body["openaiKey"] == "demo"
+
+
+def test_settings_timeout_persistence():
+    r = client.post("/v1/settings", json={"ollamaTimeout": 60, "openrouterTimeout": 45, "openaiTimeout": 30})
+    assert r.status_code == 200
+    r = client.get("/v1/settings")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ollamaTimeout"] == 60
+    assert body["openrouterTimeout"] == 45
+    assert body["openaiTimeout"] == 30
+
+
+def test_chat_uses_configured_timeout():
+    r = client.post("/v1/settings", json={"ollamaTimeout": 1})
+    assert r.status_code == 200
+    r = client.get("/v1/settings")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ollamaTimeout"] == 1
 
 
 def test_state_round_trip():
